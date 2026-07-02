@@ -39,7 +39,47 @@ Erfasst eine öffentliche URL visuell und strukturell als Grundlage aller weiter
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /abc-architecture_
+**Erstellt:** 2026-07-02 · **Stack:** Claude-Code-Skill-Pipeline (CLI, kein FastAPI/Flutter) · **Branch:** dev
+
+### Pipeline-Struktur
+```
+ui-check Skill (PROJ-5, Orchestrator — später)
+└── Schritt „capture" (PROJ-1)
+    ├── Preflight     — Tool-Check (agent-browser installiert?), URL-Validierung
+    ├── Browse        — Seite öffnen, Network-Idle, Scroll-Durchlauf (Lazy-Loading),
+    │                   Cookie-Banner-Dismiss (Best-Effort-Selektorliste)
+    ├── Shots         — Fullpage-Screenshots 375 / 768 / 1440 px
+    ├── Snapshot      — A11y-Tree (token-kompakt) + dom-meta (Title, Meta, OG, Favicon)
+    └── Finalize      — meta.json schreiben, Exit-Code setzen
+```
+
+### Datenhaltung (Run-Ordner-Kontrakt — Vertrag aller Stufe-1-Features)
+```
+runs/YYYY-MM-DD-<domain>-NNN/
+├── capture/    shot-375.png · shot-768.png · shot-1440.png
+│               snapshot.txt (A11y-Tree) · dom-meta.json
+├── meta.json   URL, finale URL, Status, Dauer, Vermerke (Cookie-Banner, Kappung …)
+└── (später: lighthouse/ · branding/ · report.md · scores.json — PROJ-2/3/4)
+```
+Keine DB, kein MinIO — Läufe sind lokale Archive; `runs/` steht in `.gitignore`.
+
+### CLI-Kontrakt
+```
+capture <url> --out <run-dir> [--timeout 60] [--max-height 20000]
+Exit 0 = ok · 2 = Abbruch (nicht erreichbar / Bot-Schutz / kein HTML)
+Meldungen deutsch auf stdout; maschinenlesbares Ergebnis in meta.json
+```
+
+### Tech-Entscheidungen
+- **agent-browser statt Playwright-MCP:** reine CLI ohne Server-Setup; A11y-Snapshots ~200–400 Tokens statt rohem HTML → hält den Claude-Judge (PROJ-4) token-günstig. Vorhandener playwright-Skill bleibt Fallback.
+- **Dateien statt DB:** Run-Ordner-Kontrakt macht jedes Stufe-1-Feature unabhängig testbar; ein Lauf = ein Archiv.
+- **Bot-Schutz = sauberer Abbruch,** kein Umgehungsversuch (PRD Non-Goal).
+- **Feste Viewports 375/768/1440:** deckungsgleich mit QA-Konvention und UI-Mockup → Vergleichbarkeit über alle Läufe.
+- **Helper-Skripte bash-/stdlib-basiert;** wo Python nötig, im `Dashboard`-Conda-Env (Haus-Konvention).
+
+### Dependencies
+- `agent-browser` (npm, global) + `agent-browser install` (Chromium)
+- keine neuen Python-Pakete (Stdlib genügt)
 
 ## QA Test Results
 _To be added by /abc-qa_

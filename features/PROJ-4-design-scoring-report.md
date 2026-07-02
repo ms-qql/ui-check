@@ -50,7 +50,28 @@ Gesamtscore = gewichtetes Mittel (Default: 25/15/15/15/30 — Conversion am höc
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /abc-architecture_
+**Erstellt:** 2026-07-02 · **Stack:** Claude-Code-Skill-Pipeline (Claude als Judge) · **Branch:** dev
+
+### Struktur
+Input-Gate (Capture zwingend; Lighthouse/Branding optional-degradiert) → drei Judge-Pässe: **Visuell** (3 Screenshots gegen Rubrik), **KI-Generik** (design-ai-check-Rubrik, invertiert), **Conversion** (Cai: Clarity/Credibility/Logic/Action/Emotion auf Screenshots + Snapshot) → Merge mit Lighthouse-Dimensionen → Gewichtung 25/15/15/15/30 mit Renormierung fehlender Dimensionen → Befund-Assembly (jeder Befund mit Beleg: Screenshot-Region, Lighthouse-Audit-ID oder Kontrastwert) → Rendern `report.md` + `scores.json` → Benchmark-Zeile aus `data/runs.jsonl` (ab n ≥ 10 je Industrie-Tag).
+
+### Daten
+```
+<run-dir>/report.md · scores.json        Deliverables
+rubrics/  (im Repo, versioniert)         Anker-Beispiele je 20er-Band, je Judge-Pass
+data/runs.jsonl  (append-only)           Datum · URL-Hash · Industrie-Tag · Scores ·
+                                         Rubrik-Version — keine Klardaten
+```
+
+### Tech-Entscheidungen
+- **Versionierte Rubriken mit Anker-Beispielen** sind der Mechanismus für die ±5-Reproduzierbarkeit; jede Rubrik-Änderung = neue Version, damit Benchmarks vergleichbar bleiben.
+- **Judge in frischem Kontext** ohne Pipeline-Verlauf (Bias-Schutz) — identisches Setup wie später beim Nachher-Scoring (PROJ-9).
+- **Renormierung statt Null-Strafe** bei ausgefallenen Messungen: „nicht messbar" verfälscht den Gesamtscore nicht.
+- **Befunde ohne Beleg sind unzulässig** — erzwungen durch das Befund-Schema (Quelle + Fundort Pflichtfelder).
+- **`data/runs.jsonl` nur mit URL-Hashes:** Benchmark-Wert ohne Kundendaten im Repo-Verlauf.
+
+### Dependencies
+- keine neuen — der Judge ist Claude selbst; Rendern via Stdlib
 
 ## QA Test Results
 _To be added by /abc-qa_

@@ -38,7 +38,34 @@ Der Claude-Code-Skill `ui-check` ist der Einstiegspunkt von Stufe 1: nimmt URL +
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /abc-architecture_
+**Erstellt:** 2026-07-02 · **Stack:** Claude-Code-Skill (projektlokal) + Schritt-CLIs aus PROJ-1–4 · **Branch:** dev
+
+### Struktur
+```
+.claude/skills/ui-check/SKILL.md      Orchestrator-Anweisung
+└── Ablauf pro Lauf:
+    1. Preflight        alle Tools prüfen (agent-browser, lighthouse, extractor)
+    2. Run-Ordner       runs/YYYY-MM-DD-<domain>-NNN/ anlegen
+    3. Capture ∥ Lighthouse   parallel (beide brauchen nur die URL)
+    4. Branding         nach Capture
+    5. Scoring          wenn alle Inputs final
+    6. Abschluss        Terminal-Summary (Score, Top-3, Report-Pfad)
+                        + Append data/runs.jsonl
+```
+Jeder Lauf führt `status.json` (Phase, Zeiten, Teilfehler) — spätere Fortschrittsquelle für Jupiter (PROJ-14).
+
+### CLI-Kontrakt
+`/ui-check <url> [--industry <tag>] [--prompt "…"] [--desktop]` · Exit 0 = ok, 1 = Teilfehler, 2 = Abbruch.
+
+### Tech-Entscheidungen
+- **Fehlerpolitik zentral im Orchestrator:** Capture-Fehler = Abbruch (nichts zu bewerten); Lighthouse-/Logo-/Extraktor-Fehler = degradieren mit „nicht messbar"-Vermerk. Schritte selbst bleiben dumm.
+- **Skill projektlokal** (`.claude/skills/`), später global promotebar — Jupiter ruft denselben Skill headless auf (PROJ-53-Muster).
+- **Headless-Garantie:** bei vollständigen Parametern keine interaktiven Fragen; `--industry` fehlt → Auto-Vorschlag mit `auto`-Markierung.
+- **`--prompt` wird durchgereicht** und im Report als Nutzer-Kontext ausgewiesen (Stufe 2 nutzt ihn im Redesign-Brief).
+- **Kollisionssicherheit:** NNN-Suffix pro Tag/Domain; `runs.jsonl`-Appends zeilenatomar.
+
+### Dependencies
+- keine über PROJ-1–4 hinaus
 
 ## QA Test Results
 _To be added by /abc-qa_

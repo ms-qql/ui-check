@@ -35,7 +35,30 @@ Misst die technische Qualität der Ziel-URL mit Lighthouse (CLI, headless): Perf
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /abc-architecture_
+**Erstellt:** 2026-07-02 · **Stack:** Claude-Code-Skill-Pipeline (CLI) · **Branch:** dev
+
+### Struktur
+Preflight (lighthouse installiert?) → Lauf Mobile (Default) → optional Desktop → Extraktion `lh-summary.json` → Spiegelung der Capture-Vermerke (Cookie-Banner) aus PROJ-1.
+
+### Daten (im Run-Ordner-Kontrakt)
+```
+lighthouse/
+├── lighthouse-mobile.json    Voll-Report (Beweis/Archiv)
+├── lighthouse-desktop.json   nur bei --desktop
+└── lh-summary.json           4 Kategorie-Scores · CWV mit Google-Bewertung ·
+                              Top-5-Opportunities · status: ok|failed + Grund
+```
+
+### CLI-Kontrakt
+`lh-audit <url> --out <run-dir> [--desktop]` · Exit 0 = ok, 1 = failed (Pipeline degradiert, bricht nicht ab) · Timeout 120 s.
+
+### Tech-Entscheidungen
+- **Lokale Lighthouse-CLI statt PageSpeed-Insights-API:** kein API-Key, keine Quota, funktioniert für jede erreichbare URL. Trade-off: keine CrUX-Felddaten — dokumentiert, später zuschaltbar.
+- **Voll-JSON bleibt erhalten,** Pipeline liest nur das Summary → Befunde in PROJ-4 sind stets belegbar.
+- **Ein Browser für alles:** Lighthouse nutzt das Chromium der agent-browser-Installation (CHROME_PATH).
+
+### Dependencies
+- `lighthouse` (npm, global)
 
 ## QA Test Results
 _To be added by /abc-qa_

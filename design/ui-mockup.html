@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UI-Check — Jupiter MicroApp · Design-Mockup v0.1</title>
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link href="https://fonts.bunny.net/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600" rel="stylesheet">
+<style>
+:root{
+  --accent:#0D9488; --accent-hover:#0891B2; --accent-active:#0E7490;
+  --glow:#5EEAD4; --accent-soft:#CCFBF1;
+  --ink:#0A0A0A; --surface:#171717; --card:#1F1F1F;
+  --text:#FAFAFA; --muted:#A3A3A3; --muted2:#525252;
+  --border:rgba(255,255,255,.1); --border-strong:rgba(255,255,255,.2);
+  --r-sm:4px; --r-md:6px; --r-lg:8px;
+  --sans:'DM Sans',sans-serif; --mono:'JetBrains Mono',monospace;
+}
+body.light{
+  --ink:#FAFAFA; --surface:#EFEFEE; --card:#FFFFFF;
+  --text:#0A0A0A; --muted:#525252; --muted2:#A3A3A3;
+  --border:rgba(0,0,0,.08); --border-strong:rgba(0,0,0,.18);
+  --glow:#0D9488;
+}
+body.light .s-low{background:rgba(220,38,38,.1);color:#DC2626}
+body.light .s-mid{background:rgba(217,119,6,.12);color:#B45309}
+body.light .bar i.bad{background:#DC2626}
+body.light .bar i.warn{background:#D97706}
+body.light .sev.high{background:#DC2626}
+body.light .sev.med{background:#D97706}
+body.light .cmp .lbl{background:rgba(255,255,255,.88)}
+body.light .badge.soft .dot{background:var(--accent)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ink);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh}
+a{color:var(--accent);text-decoration:none}
+
+/* ---------- Shell ---------- */
+.shell{max-width:1280px;margin:0 auto;padding:0 32px}
+header{border-bottom:1px solid var(--border)}
+.topbar{display:flex;align-items:center;gap:16px;padding:20px 0}
+.logo{display:flex;align-items:center;gap:10px}
+.logo svg{color:var(--accent)}
+.logo .word{font-weight:600;font-size:17px;letter-spacing:-.01em}
+.logo .word b{color:var(--accent);font-weight:600}
+.divider{width:1px;height:20px;background:var(--border-strong)}
+.appname{font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:var(--muted)}
+.topbar .spacer{flex:1}
+.badge{font-family:var(--mono);font-size:10px;letter-spacing:.12em;padding:5px 10px;border:1px solid var(--border-strong);border-radius:999px;color:var(--muted)}
+.badge.soft{background:rgba(13,148,136,.12);border-color:rgba(13,148,136,.4);color:var(--glow)}
+.badge .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--glow);margin-right:6px;vertical-align:1px}
+
+nav.tabs{display:flex;gap:4px;padding-bottom:0}
+nav.tabs button{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:none;border:none;color:var(--muted);padding:12px 16px;cursor:pointer;border-bottom:2px solid transparent}
+nav.tabs button.active{color:var(--text);border-bottom-color:var(--accent)}
+nav.tabs button:hover{color:var(--text)}
+
+section.screen{display:none;padding:40px 0 80px}
+section.screen.active{display:block}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+h1{font-size:32px;font-weight:600;letter-spacing:-.02em}
+h2{font-size:18px;font-weight:600;margin-bottom:16px}
+.sub{color:var(--muted);font-size:15px;font-weight:300;margin-top:8px;max-width:560px}
+
+/* ---------- Controls ---------- */
+.btn{font-family:var(--sans);font-size:14px;font-weight:500;border-radius:var(--r-md);padding:11px 20px;cursor:pointer;border:1px solid transparent}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-hover)}
+.btn.ghost{background:transparent;border-color:var(--border-strong);color:var(--text)}
+.btn.ghost:hover{border-color:var(--muted)}
+.btn.sm{padding:7px 14px;font-size:13px}
+.input{background:var(--ink);border:1px solid var(--border-strong);border-radius:var(--r-md);color:var(--text);font-family:var(--sans);font-size:14px;padding:11px 14px}
+.input:focus{outline:none;border-color:var(--accent)}
+.seg{display:inline-flex;border:1px solid var(--border-strong);border-radius:var(--r-md);overflow:hidden}
+.seg button{font-family:var(--mono);font-size:11px;letter-spacing:.08em;background:none;border:none;color:var(--muted);padding:9px 14px;cursor:pointer}
+.seg button.on{background:rgba(13,148,136,.15);color:var(--glow)}
+.chip{font-family:var(--mono);font-size:11px;letter-spacing:.06em;padding:6px 12px;border:1px solid var(--border-strong);border-radius:999px;background:none;color:var(--muted);cursor:pointer}
+.chip.on{border-color:var(--accent);color:var(--glow);background:rgba(13,148,136,.1)}
+.icon-btn{width:34px;height:34px;border-radius:999px;border:1px solid var(--border-strong);background:none;color:var(--muted);cursor:pointer;display:grid;place-items:center;font-size:15px;line-height:1}
+.icon-btn:hover{color:var(--text);border-color:var(--muted)}
+textarea.input{width:100%;min-height:72px;resize:vertical;font-weight:300;line-height:1.5}
+.field-lbl{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:8px}
+
+/* ---------- Cards & Grid ---------- */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:24px}
+.grid{display:grid;gap:16px}
+.stats{grid-template-columns:repeat(4,1fr);margin:32px 0}
+.stat .num{font-size:28px;font-weight:600;letter-spacing:-.02em}
+.stat .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.stat .delta{font-family:var(--mono);font-size:11px;color:var(--glow);margin-left:8px}
+
+/* ---------- Table ---------- */
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--border-strong)}
+td{padding:14px 12px;border-bottom:1px solid var(--border);color:var(--text)}
+td .mono{font-family:var(--mono);font-size:12px;color:var(--muted)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.score-pill{font-family:var(--mono);font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;display:inline-block;min-width:44px;text-align:center}
+.s-low{background:rgba(220,60,60,.15);color:#F87171}
+.s-mid{background:rgba(220,160,40,.15);color:#FBBF24}
+.s-high{background:rgba(13,148,136,.18);color:var(--glow)}
+.tag{font-family:var(--mono);font-size:10px;letter-spacing:.08em;padding:3px 8px;border:1px solid var(--border);border-radius:var(--r-sm);color:var(--muted)}
+
+/* ---------- Score panel ---------- */
+.report-head{display:flex;align-items:flex-start;gap:40px;margin:32px 0}
+.ring{position:relative;width:150px;height:150px;flex:none}
+.ring svg{transform:rotate(-90deg)}
+.ring .val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .val .n{font-size:40px;font-weight:600;letter-spacing:-.03em}
+.ring .val .of{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.1em}
+.dims{flex:1;display:flex;flex-direction:column;gap:14px;padding-top:6px}
+.dim{display:grid;grid-template-columns:200px 1fr 48px;align-items:center;gap:16px}
+.dim .name{font-size:13px;color:var(--text)}
+.dim .src{font-family:var(--mono);font-size:10px;color:var(--muted2);display:block;margin-top:1px}
+.bar{height:5px;background:var(--surface);border-radius:999px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px;background:var(--accent)}
+.bar i.warn{background:#FBBF24}.bar i.bad{background:#F87171}
+.dim .v{font-family:var(--mono);font-size:12px;text-align:right;color:var(--muted)}
+.bench{font-family:var(--mono);font-size:11px;color:var(--muted);border-left:2px solid var(--accent);padding:10px 14px;background:var(--surface);border-radius:0 var(--r-md) var(--r-md) 0;margin-top:20px}
+.bench b{color:var(--glow);font-weight:600}
+
+/* ---------- Findings ---------- */
+.finding{display:flex;gap:14px;padding:16px 0;border-bottom:1px solid var(--border)}
+.finding:last-child{border-bottom:none}
+.sev{width:8px;height:8px;border-radius:50%;margin-top:6px;flex:none}
+.sev.high{background:#F87171}.sev.med{background:#FBBF24}.sev.low{background:var(--muted2)}
+.finding .t{font-size:14px;font-weight:500}
+.finding .d{font-size:13px;color:var(--muted);font-weight:300;margin-top:3px}
+.finding .meta{font-family:var(--mono);font-size:10px;color:var(--muted2);margin-top:6px;letter-spacing:.06em}
+
+/* ---------- Screenshots / wireframe placeholders ---------- */
+.shots{grid-template-columns:1fr 1fr 1fr;margin-top:8px}
+.shot{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:14px}
+.shot .cap{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--muted);margin-bottom:10px;display:flex;justify-content:space-between}
+.wf{background:var(--ink);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;display:flex;flex-direction:column;gap:8px}
+.wf .ln{height:8px;border-radius:2px;background:var(--card)}
+.wf .ln.a{background:rgba(13,148,136,.35)}
+.wf .blk{border-radius:2px;background:var(--card)}
+.wf .row{display:flex;gap:8px}
+.wf .row>*{flex:1}
+
+/* ---------- Compare slider ---------- */
+.cmp-controls{display:flex;gap:12px;align-items:center;margin:24px 0 16px;flex-wrap:wrap}
+.cmp{position:relative;border:1px solid var(--border-strong);border-radius:var(--r-lg);overflow:hidden;height:420px;background:var(--surface)}
+.cmp .pane{position:absolute;inset:0;padding:28px 32px}
+.cmp .after{clip-path:inset(0 0 0 var(--clip,50%))}
+.cmp .lbl{position:absolute;top:14px;font-family:var(--mono);font-size:10px;letter-spacing:.12em;padding:4px 10px;border-radius:999px;background:rgba(10,10,10,.8);border:1px solid var(--border-strong)}
+.cmp .lbl.l{left:14px;color:var(--muted)}
+.cmp .lbl.r{right:14px;color:var(--glow);border-color:rgba(13,148,136,.5)}
+.cmp .handle{position:absolute;top:0;bottom:0;left:var(--clip,50%);width:2px;background:var(--accent);pointer-events:none}
+.cmp .handle::after{content:'◂ ▸';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--accent);color:#fff;font-size:10px;letter-spacing:-1px;padding:6px 8px;border-radius:999px;white-space:nowrap}
+.cmp input[type=range]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:ew-resize}
+.verdicts{grid-template-columns:1fr 1fr 1fr;margin-top:20px}
+.verdict .sec{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.verdict p{font-size:13px;color:var(--muted);font-weight:300;line-height:1.5}
+.verdict p b{color:var(--text);font-weight:500}
+
+/* ---------- Portfolio ---------- */
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:24px 0}
+.pf-grid{grid-template-columns:repeat(3,1fr)}
+.pf .prev{height:130px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--ink);margin-bottom:14px;padding:14px;display:flex;flex-direction:column;gap:7px;overflow:hidden}
+.pf .name{font-size:14px;font-weight:500}
+.pf .meta{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.brandings{grid-template-columns:repeat(3,1fr);margin-top:16px}
+.bp{display:flex;align-items:center;gap:14px}
+.bp .swatches{display:flex}
+.bp .sw{width:22px;height:22px;border-radius:50%;border:2px solid var(--card);margin-left:-6px}
+.bp .sw:first-child{margin-left:0}
+.bp .n{font-size:14px;font-weight:500}
+.bp .src{font-family:var(--mono);font-size:10px;color:var(--muted2);display:block;margin-top:2px;letter-spacing:.06em}
+/* ---------- Branding ---------- */
+.brand-head{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+.brand-head .mark{width:14px;height:14px;border-radius:3px;transform:rotate(45deg)}
+.brand-head .bn{font-size:22px;font-weight:600;letter-spacing:-.01em}
+.brand-dom{font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:24px;display:block}
+.bsec{font-family:var(--mono);font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:var(--muted);margin:28px 0 12px}
+.bsec:first-of-type{margin-top:20px}
+.font-card{border:1px solid var(--border-strong);border-radius:var(--r-md);background:var(--ink);padding:16px 20px;display:inline-block;margin-right:12px}
+.font-card .fn{font-size:20px;font-weight:600}
+.font-card .fr{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--muted);margin-top:4px}
+.swatch-row{display:flex;gap:12px;flex-wrap:wrap}
+.sw-lg{width:56px;height:56px;border-radius:var(--r-sm);border:1px solid var(--border)}
+.sw-wrap{text-align:center}
+.sw-wrap .hex{font-family:var(--mono);font-size:9px;color:var(--muted);display:block;margin-top:6px;letter-spacing:.04em}
+.sw-add{width:56px;height:56px;border-radius:var(--r-sm);border:1px dashed var(--border-strong);background:none;color:var(--muted);font-size:18px;cursor:pointer}
+.sw-add:hover{color:var(--text);border-color:var(--muted)}
+.voice{font-size:14px;font-weight:300;line-height:1.65;color:var(--text);max-width:620px}
+.voice b{font-weight:500}
+.brand-hint{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--muted2);margin-top:6px}
+.token-chips{display:flex;gap:8px;flex-wrap:wrap}
+.section-gap{margin-top:48px}
+footer{border-top:1px solid var(--border);padding:24px 0;margin-top:40px}
+footer .shell{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--muted2)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="shell">
+    <div class="topbar">
+      <div class="logo">
+        <svg width="26" height="26" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round">
+          <circle cx="50" cy="50" r="9" fill="currentColor" stroke="none"/>
+          <line x1="50" y1="41" x2="50" y2="16"/><circle cx="50" cy="12" r="4" fill="currentColor" stroke="none"/>
+          <line x1="58" y1="45" x2="80" y2="32"/><circle cx="83" cy="30" r="4" fill="currentColor" stroke="none"/>
+          <line x1="58" y1="55" x2="80" y2="68"/><circle cx="83" cy="70" r="4" fill="currentColor" stroke="none"/>
+          <line x1="50" y1="59" x2="50" y2="84"/><circle cx="50" cy="88" r="4" fill="currentColor" stroke="none"/>
+          <line x1="42" y1="55" x2="20" y2="68"/><circle cx="17" cy="70" r="4" fill="currentColor" stroke="none"/>
+          <line x1="42" y1="45" x2="20" y2="32"/><circle cx="17" cy="30" r="4" fill="currentColor" stroke="none"/>
+        </svg>
+        <span class="word"><b>Aux</b>evo</span>
+      </div>
+      <div class="divider"></div>
+      <span class="appname">UI-CHECK</span>
+      <div class="spacer"></div>
+      <span class="badge">JUPITER · MICROAPP</span>
+      <span class="badge soft"><span class="dot"></span>BEREIT</span>
+      <button class="icon-btn" id="themeToggle" title="Light/Dark umschalten">◐</button>
+    </div>
+    <nav class="tabs">
+      <button class="active" data-t="dash">Dashboard</button>
+      <button data-t="report">Audit-Report</button>
+      <button data-t="branding">Branding</button>
+      <button data-t="compare">Vorher / Nachher</button>
+      <button data-t="portfolio">Portfolio</button>
+    </nav>
+  </div>
+</header>
+
+<!-- ============ SCREEN 1: DASHBOARD ============ -->
+<section class="screen active" id="dash">
+  <div class="shell">
+    <div class="eyebrow">// Neuer Lauf</div>
+    <h1>Website prüfen &amp; neu denken</h1>
+    <p class="sub">URL eingeben — UI-Check erstellt Scoring, extrahiert das Branding und schlägt zwei Redesign-Varianten vor.</p>
+
+    <div class="card" style="margin-top:28px">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <input class="input" style="flex:1;min-width:280px" placeholder="https://kunden-website.de" value="https://mueller-sanitaer-cux.de">
+        <div class="seg">
+          <button class="on">AUDIT + REDESIGN</button><button>NUR AUDIT</button>
+        </div>
+        <div class="seg">
+          <button class="on">AUTO</button><button>LANDING</button><button>APP</button>
+        </div>
+        <button class="btn primary">Lauf starten</button>
+      </div>
+      <div style="margin-top:16px">
+        <label class="field-lbl">Spezielle Anweisungen an die KI · optional</label>
+        <textarea class="input" placeholder="z. B. Fokus auf Online-Terminbuchung als Conversion-Ziel · Farbwelt der Marke beibehalten · kein Stock-Foto-Look · Zielgruppe: Hausbesitzer 45+ · Ton bodenständig, kein Startup-Sprech"></textarea>
+      </div>
+    </div>
+
+    <div class="grid stats">
+      <div class="card stat"><div class="num">24</div><div class="lbl">Läufe gesamt</div></div>
+      <div class="card stat"><div class="num">47<span class="delta">Ø Score</span></div><div class="lbl">Auditierte Seiten</div></div>
+      <div class="card stat"><div class="num">+38<span class="delta">Ø Delta</span></div><div class="lbl">Score-Verbesserung</div></div>
+      <div class="card stat"><div class="num">31</div><div class="lbl">Portfolio-Bausteine</div></div>
+    </div>
+
+    <h2>Letzte Läufe</h2>
+    <div class="card" style="padding:8px 16px">
+      <table>
+        <tr><th>Website</th><th>Modus</th><th>Industrie</th><th>Score</th><th>Redesign</th><th>Datum</th><th></th></tr>
+        <tr>
+          <td>mueller-sanitaer-cux.de<span class="mono" style="display:block">Lauf #024</span></td>
+          <td><span class="tag">LANDING</span></td><td><span class="tag">HANDWERK</span></td>
+          <td><span class="score-pill s-low">38</span></td>
+          <td><span class="score-pill s-high">86</span></td>
+          <td class="mono">02.07.26</td>
+          <td><button class="btn ghost sm">Öffnen</button></td>
+        </tr>
+        <tr>
+          <td>kanzlei-nordlicht.de<span class="mono" style="display:block">Lauf #023</span></td>
+          <td><span class="tag">LANDING</span></td><td><span class="tag">KANZLEI</span></td>
+          <td><span class="score-pill s-mid">54</span></td>
+          <td><span class="score-pill s-high">91</span></td>
+          <td class="mono">01.07.26</td>
+          <td><button class="btn ghost sm">Öffnen</button></td>
+        </tr>
+        <tr>
+          <td>app.zeiterfassung-plus.de<span class="mono" style="display:block">Lauf #022 · Audit-only</span></td>
+          <td><span class="tag">APP</span></td><td><span class="tag">SAAS</span></td>
+          <td><span class="score-pill s-mid">61</span></td>
+          <td class="mono">—</td>
+          <td class="mono">29.06.26</td>
+          <td><button class="btn ghost sm">Öffnen</button></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCREEN 2: REPORT ============ -->
+<section class="screen" id="report">
+  <div class="shell">
+    <div class="eyebrow">// Lauf #024 · mueller-sanitaer-cux.de</div>
+    <h1>Audit-Report</h1>
+
+    <div class="report-head">
+      <div class="ring">
+        <svg width="150" height="150">
+          <circle cx="75" cy="75" r="66" fill="none" stroke="#171717" stroke-width="8"/>
+          <circle cx="75" cy="75" r="66" fill="none" stroke="#F87171" stroke-width="8"
+                  stroke-linecap="round" stroke-dasharray="157 415"/>
+        </svg>
+        <div class="val"><span class="n">38</span><span class="of">/ 100</span></div>
+      </div>
+      <div class="dims">
+        <div class="dim">
+          <div><span class="name">Visuelle Qualität</span><span class="src">CLAUDE-JUDGE</span></div>
+          <div class="bar"><i class="bad" style="width:31%"></i></div><span class="v">31</span>
+        </div>
+        <div class="dim">
+          <div><span class="name">KI-Generik / Slop</span><span class="src">DESIGN-AI-CHECK</span></div>
+          <div class="bar"><i class="warn" style="width:55%"></i></div><span class="v">55</span>
+        </div>
+        <div class="dim">
+          <div><span class="name">Performance</span><span class="src">LIGHTHOUSE</span></div>
+          <div class="bar"><i class="warn" style="width:48%"></i></div><span class="v">48</span>
+        </div>
+        <div class="dim">
+          <div><span class="name">Accessibility</span><span class="src">LIGHTHOUSE / AXE</span></div>
+          <div class="bar"><i class="bad" style="width:29%"></i></div><span class="v">29</span>
+        </div>
+        <div class="dim">
+          <div><span class="name">Conversion</span><span class="src">CAI-MODELL · CLARITY / CREDIBILITY / LOGIC</span></div>
+          <div class="bar"><i class="bad" style="width:26%"></i></div><span class="v">26</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="bench">BENCHMARK · HANDWERK — typischer Bereich <b>35–55</b> · diese Seite: <b>38</b> · Perzentil 22 von n=9 Läufen</div>
+
+    <div class="grid shots section-gap">
+      <div class="shot"><div class="cap"><span>MOBILE</span><span>375PX</span></div>
+        <div class="wf"><div class="ln a" style="width:40%"></div><div class="blk" style="height:44px"></div><div class="ln" style="width:80%"></div><div class="ln" style="width:65%"></div><div class="blk" style="height:26px;width:50%;background:rgba(13,148,136,.35)"></div></div>
+      </div>
+      <div class="shot"><div class="cap"><span>TABLET</span><span>768PX</span></div>
+        <div class="wf"><div class="ln a" style="width:30%"></div><div class="row"><div class="blk" style="height:54px"></div><div class="blk" style="height:54px"></div></div><div class="ln" style="width:70%"></div><div class="ln" style="width:45%"></div></div>
+      </div>
+      <div class="shot"><div class="cap"><span>DESKTOP</span><span>1440PX</span></div>
+        <div class="wf"><div class="ln a" style="width:22%"></div><div class="row"><div class="blk" style="height:48px"></div><div class="blk" style="height:48px"></div><div class="blk" style="height:48px"></div></div><div class="ln" style="width:55%"></div></div>
+      </div>
+    </div>
+
+    <div class="section-gap">
+      <h2>Befunde <span style="font-family:var(--mono);font-size:11px;color:var(--muted);font-weight:400">— 11 gesamt, 4 kritisch</span></h2>
+      <div class="card">
+        <div class="finding"><span class="sev high"></span><div>
+          <div class="t">Kein erkennbarer primärer CTA above the fold</div>
+          <div class="d">Telefonnummer als Bild eingebunden, kein klickbares Element im Hero. Conversion-Ziel unklar.</div>
+          <div class="meta">CONVERSION · CAI-LOGIC · HERO-SEKTION</div>
+        </div></div>
+        <div class="finding"><span class="sev high"></span><div>
+          <div class="t">Kontrastverhältnis 2.1:1 bei Navigations-Links</div>
+          <div class="d">Hellgrau auf Weiß unterschreitet WCAG AA (4.5:1) deutlich — betrifft alle Unterseiten.</div>
+          <div class="meta">ACCESSIBILITY · AXE · GLOBAL</div>
+        </div></div>
+        <div class="finding"><span class="sev med"></span><div>
+          <div class="t">Generisches 3-Spalten-Icon-Grid als einzige Struktur</div>
+          <div class="d">Austauschbares Template-Layout ohne visuelle Hierarchie; Leistungen nicht priorisiert.</div>
+          <div class="meta">VISUELL · CLAUDE-JUDGE · LEISTUNGEN</div>
+        </div></div>
+        <div class="finding"><span class="sev low"></span><div>
+          <div class="t">Largest Contentful Paint 4.8s (mobil)</div>
+          <div class="d">Unkomprimiertes Hero-Foto (2.4 MB JPEG). WebP + Responsive-Sizes würden ~70 % sparen.</div>
+          <div class="meta">PERFORMANCE · LIGHTHOUSE · LCP</div>
+        </div></div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-top:32px">
+      <button class="btn primary">Redesign ansehen →</button>
+      <button class="btn ghost">Branding-Tokens (JSON)</button>
+      <button class="btn ghost">Report exportieren</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCREEN 2b: BRANDING ============ -->
+<section class="screen" id="branding">
+  <div class="shell">
+    <div class="eyebrow">// Lauf #024 · Extrahiertes Brand-Design</div>
+    <h1>Branding</h1>
+    <p class="sub">Automatisch aus der Live-Site extrahiert (design-extract + css-analyzer). Abweichungen im Prompt-Feld korrigieren oder direkt editieren.</p>
+
+    <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-top:28px;align-items:start">
+
+      <div class="card">
+        <div class="brand-head">
+          <span class="mark" style="background:#1D4ED8"></span>
+          <span class="bn">Müller Sanitär</span>
+          <span class="badge" style="border-color:rgba(13,148,136,.5);color:var(--glow)">SCRAPED</span>
+        </div>
+        <span class="brand-dom">mueller-sanitaer-cux.de</span>
+
+        <div class="bsec">Font</div>
+        <div>
+          <div class="font-card"><div class="fn" style="font-weight:700;letter-spacing:.01em">Oswald</div><div class="fr">DISPLAY · GEFUNDEN IN H1–H3</div></div>
+          <div class="font-card"><div class="fn" style="font-weight:400">Open Sans</div><div class="fr">TEXT · FLIESSTEXT + NAV</div></div>
+        </div>
+        <div class="brand-hint">AUS DER SITE EXTRAHIERT — BEI ABWEICHUNG HIER ODER IM PROMPT KORRIGIEREN</div>
+
+        <div class="bsec">Palette</div>
+        <div class="swatch-row">
+          <div class="sw-wrap"><div class="sw-lg" style="background:#1D4ED8"></div><span class="hex">#1D4ED8</span></div>
+          <div class="sw-wrap"><div class="sw-lg" style="background:#1E3A8A"></div><span class="hex">#1E3A8A</span></div>
+          <div class="sw-wrap"><div class="sw-lg" style="background:#F59E0B"></div><span class="hex">#F59E0B</span></div>
+          <div class="sw-wrap"><div class="sw-lg" style="background:#111827"></div><span class="hex">#111827</span></div>
+          <div class="sw-wrap"><div class="sw-lg" style="background:#FFFFFF"></div><span class="hex">#FFFFFF</span></div>
+          <div class="sw-wrap"><button class="sw-add">+</button><span class="hex">&nbsp;</span></div>
+        </div>
+
+        <div class="bsec">Tonalität</div>
+        <p class="voice"><b>Bodenständig und direkt.</b> Betont 24h-Notdienst und drei Generationen Meisterbetrieb; spricht Hausbesitzer in Cuxhaven und Umland an. Vertrauen entsteht über Schnelligkeit, Festpreise und regionale Nähe — keine Fachsprache, kein Marketing-Ton.</p>
+
+        <div class="bsec">Tokens</div>
+        <div class="token-chips">
+          <span class="tag">RADIUS 8PX</span><span class="tag">SPACING 4/8/16/32</span>
+          <span class="tag">SHADOW SOFT</span><span class="tag">KONTRAST AA ✕ 3 VERSTÖSSE</span>
+          <span class="tag">14 TOKENS GESAMT</span>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-top:28px">
+          <button class="btn primary sm">Als Profil speichern</button>
+          <button class="btn ghost sm">tokens.json</button>
+          <button class="btn ghost sm">Tailwind-Theme</button>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card">
+          <div class="bsec" style="margin-top:0">Logo</div>
+          <div style="background:var(--ink);border:1px solid var(--border);border-radius:var(--r-sm);padding:24px;text-align:center">
+            <span style="font-weight:700;font-size:18px;color:#1D4ED8">MÜLLER</span>
+            <span style="font-weight:300;font-size:18px;color:var(--muted)"> SANITÄR</span>
+          </div>
+          <div class="brand-hint">WORTMARKE · PNG 340×80 · VIA LOGO-API</div>
+        </div>
+        <div class="card">
+          <div class="bsec" style="margin-top:0">Anwendung im Redesign</div>
+          <p class="voice" style="font-size:13px">Primärfarbe bleibt <b>#1D4ED8</b>, Amber <b>#F59E0B</b> wird auf CTAs fokussiert (bisher dekorativ verstreut). Oswald nur noch für Headlines — Fließtext-Einsatz auf der Original-Site verletzt die eigene Hierarchie.</p>
+          <div class="token-chips" style="margin-top:12px">
+            <span class="tag">2 ANPASSUNGEN</span><span class="tag">BEGRÜNDET IM REPORT</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCREEN 3: COMPARE ============ -->
+<section class="screen" id="compare">
+  <div class="shell">
+    <div class="eyebrow">// Lauf #024 · Redesign-Vorschlag</div>
+    <h1>Vorher / Nachher</h1>
+
+    <div class="cmp-controls">
+      <div class="seg"><button>SAFE · 74</button><button class="on">BOLD · 86</button></div>
+      <div class="seg"><button>375</button><button>768</button><button class="on">1440</button></div>
+      <div class="spacer" style="flex:1"></div>
+      <span class="badge soft"><span class="dot"></span>SCORE 38 → 86</span>
+    </div>
+
+    <div class="cmp" id="cmp">
+      <!-- BEFORE -->
+      <div class="pane before">
+        <div class="wf" style="height:100%;justify-content:flex-start">
+          <div class="ln" style="width:24%;background:var(--muted2)"></div>
+          <div class="blk" style="height:120px;margin-top:8px"></div>
+          <div class="ln" style="width:60%"></div><div class="ln" style="width:45%"></div>
+          <div class="row" style="margin-top:16px"><div class="blk" style="height:70px"></div><div class="blk" style="height:70px"></div><div class="blk" style="height:70px"></div></div>
+          <div class="ln" style="width:38%;margin-top:16px"></div>
+          <div class="row"><div class="blk" style="height:50px"></div><div class="blk" style="height:50px"></div><div class="blk" style="height:50px"></div></div>
+        </div>
+      </div>
+      <!-- AFTER (bento-style wireframe) -->
+      <div class="pane after" style="background:var(--surface)">
+        <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:10px;height:100%">
+          <div class="wf" style="justify-content:center;border-color:rgba(13,148,136,.4)">
+            <div class="ln a" style="width:30%"></div>
+            <div class="ln" style="width:85%;height:16px;background:var(--muted2);opacity:.5"></div>
+            <div class="ln" style="width:60%;height:16px;background:var(--muted2);opacity:.5"></div>
+            <div class="blk" style="height:30px;width:42%;background:rgba(13,148,136,.5);margin-top:10px"></div>
+          </div>
+          <div style="display:grid;grid-template-rows:1fr 1fr;gap:10px">
+            <div class="wf"><div class="ln a" style="width:50%"></div><div class="ln" style="width:80%"></div><div class="ln" style="width:60%"></div></div>
+            <div class="wf"><div class="ln" style="width:70%"></div><div class="blk" style="height:24px;background:rgba(13,148,136,.25)"></div></div>
+          </div>
+        </div>
+      </div>
+      <span class="lbl l">VORHER · ORIGINAL</span>
+      <span class="lbl r">NACHHER · BOLD</span>
+      <div class="handle"></div>
+      <input type="range" min="0" max="100" value="50" id="cmpRange">
+    </div>
+
+    <div class="grid verdicts">
+      <div class="card verdict">
+        <div class="sec">01 · Hero</div>
+        <p><b>Zentriertes Stock-Foto → asymmetrisches Split-Layout.</b> Klares Conversion-Ziel: „Notdienst anrufen" als primärer CTA, Reaktionszeit als Trust-Element.</p>
+      </div>
+      <div class="card verdict">
+        <div class="sec">02 · Leistungen</div>
+        <p><b>3-Spalten-Icon-Grid → Bento-Grid</b> mit gewichteten Kacheln: Hauptleistung 2×, Nebenleistungen kompakt. Hierarchie statt Gleichmacherei.</p>
+      </div>
+      <div class="card verdict">
+        <div class="sec">03 · Vertrauen</div>
+        <p><b>Neue Sektion.</b> Meisterbrief, Innungs-Logo und 3 Kundenstimmen — Credibility-Lücke aus dem Audit (Cai-Modell) direkt geschlossen.</p>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-top:32px">
+      <button class="btn primary">Als HTML teilen</button>
+      <button class="btn ghost">Sektion ins Portfolio übernehmen</button>
+      <button class="btn ghost">Variante neu generieren</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCREEN 4: PORTFOLIO ============ -->
+<section class="screen" id="portfolio">
+  <div class="shell">
+    <div class="eyebrow">// Wiederverwendbare Bausteine</div>
+    <h1>Portfolio</h1>
+    <p class="sub">Kuratierte Sektionen und Branding-Profile aus allen Läufen — Basis für Low-Cost-Angebote.</p>
+
+    <div class="filters">
+      <button class="chip on">ALLE</button>
+      <button class="chip">HANDWERK</button>
+      <button class="chip">KANZLEI</button>
+      <button class="chip">SAAS</button>
+      <button class="chip">GASTRO</button>
+      <span style="width:16px"></span>
+      <button class="chip on">HERO</button>
+      <button class="chip">PRICING</button>
+      <button class="chip">TRUST</button>
+      <button class="chip">CTA</button>
+    </div>
+
+    <div class="grid pf-grid">
+      <div class="card pf">
+        <div class="prev">
+          <div class="ln a" style="width:35%"></div>
+          <div class="ln" style="width:85%;height:12px"></div><div class="ln" style="width:55%;height:12px"></div>
+          <div class="blk" style="height:22px;width:40%;background:rgba(13,148,136,.4);margin-top:6px"></div>
+        </div>
+        <div class="name">Hero · Split mit Notdienst-CTA</div>
+        <div class="meta"><span class="tag">HANDWERK</span><span class="tag">BOLD</span><span class="tag">LAUF #024</span></div>
+      </div>
+      <div class="card pf">
+        <div class="prev">
+          <div class="row" style="height:100%">
+            <div class="blk" style="background:rgba(13,148,136,.2)"></div>
+            <div style="flex:2;display:flex;flex-direction:column;gap:7px"><div class="ln" style="width:80%"></div><div class="ln" style="width:60%"></div><div class="ln a" style="width:40%"></div></div>
+          </div>
+        </div>
+        <div class="name">Bento · Leistungs-Grid 2-1-1</div>
+        <div class="meta"><span class="tag">UNIVERSAL</span><span class="tag">BOLD</span><span class="tag">LAUF #024</span></div>
+      </div>
+      <div class="card pf">
+        <div class="prev">
+          <div class="ln" style="width:50%"></div>
+          <div class="row" style="margin-top:6px"><div class="blk" style="height:56px"></div><div class="blk" style="height:56px;background:rgba(13,148,136,.25)"></div><div class="blk" style="height:56px"></div></div>
+          <div class="ln" style="width:30%;margin-top:6px"></div>
+        </div>
+        <div class="name">Pricing · 3-Tier mit Anker</div>
+        <div class="meta"><span class="tag">KANZLEI</span><span class="tag">SAFE</span><span class="tag">LAUF #023</span></div>
+      </div>
+    </div>
+
+    <div class="section-gap">
+      <h2>Branding-Profile</h2>
+      <div class="grid brandings">
+        <div class="card bp">
+          <div class="swatches">
+            <span class="sw" style="background:#0D9488"></span><span class="sw" style="background:#0A0A0A;border-color:#333"></span><span class="sw" style="background:#FAFAFA"></span>
+          </div>
+          <div><div class="n">Auxevo</div><span class="src">SEED · DM SANS + JETBRAINS MONO · DARK-FIRST</span></div>
+        </div>
+        <div class="card bp">
+          <div class="swatches">
+            <span class="sw" style="background:#1D4ED8"></span><span class="sw" style="background:#F59E0B"></span><span class="sw" style="background:#FFFFFF"></span>
+          </div>
+          <div><div class="n">Müller Sanitär</div><span class="src">EXTRAHIERT · LAUF #024 · 14 TOKENS</span></div>
+        </div>
+        <div class="card bp">
+          <div class="swatches">
+            <span class="sw" style="background:#374151"></span><span class="sw" style="background:#B45309"></span><span class="sw" style="background:#F9FAFB"></span>
+          </div>
+          <div><div class="n">Kanzlei Nordlicht</div><span class="src">EXTRAHIERT · LAUF #023 · 11 TOKENS</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="shell">
+    <span>UI-CHECK · DESIGN-MOCKUP V0.1 · 2026-07-02</span>
+    <span>AUXEVO · JUPITER MICROAPP</span>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('nav.tabs button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('section.screen').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById(b.dataset.t).classList.add('active');
+  });
+});
+document.getElementById('themeToggle').addEventListener('click',()=>{
+  document.body.classList.toggle('light');
+});
+const cmp=document.getElementById('cmp');
+document.getElementById('cmpRange').addEventListener('input',e=>{
+  cmp.style.setProperty('--clip',e.target.value+'%');
+});
+</script>
+</body>
+</html>

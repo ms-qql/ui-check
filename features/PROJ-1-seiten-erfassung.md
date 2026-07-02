@@ -1,6 +1,6 @@
 # PROJ-1: Seiten-Erfassung (Capture)
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-07-02
 **Last Updated:** 2026-07-02
 
@@ -80,6 +80,37 @@ Meldungen deutsch auf stdout; maschinenlesbares Ergebnis in meta.json
 ### Dependencies
 - `agent-browser` (npm, global) + `agent-browser install` (Chromium)
 - keine neuen Python-Pakete (Stdlib genügt)
+
+## Implementierungs-Notizen (Backend)
+**Umgesetzt:** 2026-07-02 · **Branch:** dev · **Datei:** `scripts/capture.sh` (+ `scripts/README.md`)
+
+### Was gebaut wurde
+`scripts/capture.sh` — eigenständiger Bash-CLI-Schritt nach dem Tech-Design (kein FastAPI/DB, Run-Ordner statt Persistenz). Ablauf: Preflight (curl) → Browse (agent-browser) → Shots → Snapshot → Finalize.
+
+- **Preflight (curl):** folgt Redirects, ermittelt finale URL / HTTP-Status / Content-Type / Redirect-Anzahl. Fehlerklassifizierung mit deutschen Meldungen und Exit 2:
+  - DNS (curl 6), Connection refused (7), Timeout (28, `--timeout`), TLS (35/51/60), sonstige Netzfehler.
+  - HTTP ≥ 400 → „Seite nicht erreichbar: HTTP <code>".
+  - Content-Type ≠ `text/html`/`xhtml` → „Kein HTML-Dokument".
+  - Bot-Schutz (Cloudflare/Challenge-Marker in Header/Body, `cf-mitigated`, 403/503+cloudflare) → „Seite ist bot-geschützt — Lauf nicht möglich" (kein Umgehungsversuch).
+- **Browse:** `agent-browser open` → `wait --load networkidle`; finale Client-URL wird nachgezogen; Cookie-Banner-Dismiss best-effort über Selektor- **und** Textliste (OneTrust, Cookiebot, Usercentrics, Didomi, „Alle akzeptieren" …), Ergebnis in `meta.json.cookie_banner`.
+- **Lazy-Loading:** async-IIFE-Scroll-Durchlauf (global + pro Viewport), danach zurück nach oben + erneutes Network-Idle.
+- **Shots 375/768/1440 (Fullpage):** `screenshot --full`; bei Seitenhöhe > `--max-height` (Default 20000) Kappung via Viewport-Screenshot der oberen `max-height` px (Vermerk + `capped:true` je Screenshot).
+- **Snapshot + dom-meta:** `snapshot -c` → `snapshot.txt`; ein `eval` liefert Title, Meta-Description, absolut aufgelösten Favicon, OG-Tags, Sektionen-Anzahl → `dom-meta.json`.
+- **SPA-Leerverdacht:** < 40 Zeichen sichtbarer Text nach Idle → `content_suspicion: "spa_empty"`.
+- **meta.json:** url, final_url, status (ok|aborted), error, http_status, content_type, redirects, timestamp (UTC ISO), duration_seconds, agent_browser_version, cookie_banner, content_suspicion, screenshots[], notes[]. Wird auch bei Abbruch geschrieben (sofern Run-Ordner steht).
+
+### Abweichungen / Ergänzungen vom Spec
+- **`--out` ist optional:** ohne Angabe wird `runs/<datum>-<domain>-NNN` automatisch nach Run-Ordner-Kontrakt angelegt (Bequemlichkeit; PROJ-5 übergibt `--out` explizit).
+- **Preflight via curl statt Browser** für Status/Redirects/Bot-Erkennung — robuster und token-frei; der Browser rendert erst nach bestandenem Preflight.
+- **Kappung** über hochgesetzten Viewport (`set viewport <w> <max-height>` + Nicht-`--full`-Screenshot) statt CSS-Clamp — Letzteres kollabierte die Fullpage-Höhe auf den Viewport (verworfen).
+- **`AGENT_BROWSER_ARGS=--no-sandbox,--disable-dev-shm-usage`** als Default nötig (Container/VM); überschreibbar.
+- Neue Abhängigkeit dokumentiert: `agent-browser` global installiert (v0.27.0) + `agent-browser install` (Chrome-for-Testing 150).
+
+### Manuell verifiziert
+- example.com (0 Redirects, kurze Seite) · github.com (http→https-Redirect, ~13k px Fullpage) · heise.de (Kappung 45k→20000 px, 548 Sektionen, 7 OG-Tags) → Exit 0.
+- Fehlerpfade Exit 2 + deutsche Meldung: nicht existierende Domain (DNS), GitHub-404 (HTTP 404), W3C-Dummy-PDF (Kein HTML-Dokument); jeweils `meta.json` mit `status:"aborted"`.
+
+Offen für `/abc-qa`: Bot-geschützte Seite (Cloudflare-Challenge) live gegenprüfen; Interstitial/Alters-Gate-Screenshot; sehr große Seite (> 90 s Laufzeitgrenze) unter Last.
 
 ## QA Test Results
 _To be added by /abc-qa_

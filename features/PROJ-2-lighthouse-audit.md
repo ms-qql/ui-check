@@ -1,6 +1,6 @@
 # PROJ-2: Lighthouse-Audit
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-07-02
 **Last Updated:** 2026-07-03
 
@@ -103,7 +103,50 @@ lighthouse/
   langsame SPA (Timeout-Pfad) im Feld — mit lokalen Fixtures nur simuliert.
 
 ## QA Test Results
-_To be added by /abc-qa_
+**Getestet:** 2026-07-03 · **Tester:** QA Engineer · **Branch:** dev · **Ergebnis:** ✅ Production-Ready
+
+**Umgebung:** Lighthouse 13.4.0, Chrome-for-Testing 147 (Playwright-Chromium via `CHROME_PATH`).
+Black-Box gegen lokale Fixtures (`scripts/tests/serve_fixtures.py`) — deterministisch, kein Internet.
+
+### Automatisierte Suite
+`scripts/tests/lh_audit_test.sh` → **38/38 bestanden.** Deckt Happy-Path (Mobile+Desktop),
+Nur-Mobile, Fehlerpfad (unerreichbar → failed/Exit 1) und Argument-Validierung ab.
+
+### Acceptance Criteria (manuell + automatisiert)
+| # | Kriterium | Ergebnis |
+|---|---|---|
+| 1 | Mobile-Default → `lighthouse-mobile.json`; `--desktop` → zusätzlich `lighthouse-desktop.json` | ✅ Pass |
+| 2 | `lh-summary.json`: 4 Kategorie-Scores (0–100), LCP/CLS/TBT/FCP/Speed-Index + good/ni/poor-Rating | ✅ Pass |
+| 3 | Top-Opportunities (max. 5) mit geschätzter Ersparnis (`savings_ms`, nur > 0, absteigend) | ✅ Pass |
+| 4 | Absturz/Timeout: Pipeline läuft weiter; `status:"failed"` + Grund; Exit 1 (degradiert, kein Abbruch) | ✅ Pass |
+| 5 | Keine Google-API/kein API-Key (lokale CLI) | ✅ Pass |
+| 6 | Edge: Cookie-Vermerk (`cookie_banner`) aus PROJ-1 `meta.json` gespiegelt | ✅ Pass |
+
+### Zusätzliche Edge Cases (über die Suite hinaus)
+| Fall | Erwartung | Ergebnis |
+|---|---|---|
+| `--timeout 1` (SPA-/Lade-Timeout-Simulation) | Exit 124-Pfad → `status:failed`, Meldung „Zeitüberschreitung nach 1s" | ✅ Pass |
+| Ungültiges `--timeout abc` | Exit 1, deutsche Meldung | ✅ Pass |
+| Cookie `dismissed:true` in capture-meta | `cookie_banner.note == null` (keine Warnung) | ✅ Pass |
+| Kein `--out` | Auto-Run-Ordner `runs/<datum>-<domain>-NNN/lighthouse/` | ✅ Pass |
+| `--help` | Exit 0, Nutzungs-Header | ✅ Pass |
+| Redirect `/redirect → /normal` | `final_url` = aufgelöste Ziel-URL (Lighthouse `finalDisplayedUrl`) | ✅ Pass |
+
+### Security / Red-Team
+Lokale CLI ohne Auth-/Tenant-/DB-Modell → JWT-/RLS-/Injection-Vektoren **nicht anwendbar**.
+- **Parametrisierung:** URL wird als Argument an `lighthouse`/`timeout` übergeben (kein `eval`, keine Shell-Interpolation der URL in Kommandos). ✅
+- **Kein Secret-Leak:** kein API-Key, keine `.env`; `lighthouse.log` enthält nur Roh-Stderr. ✅
+- **Informationell (kein Bug):** das Tool auditiert jede erreichbare URL inkl. interner/localhost-Adressen. Als lokales CLI-Werkzeug erwünscht; **falls** PROJ-19 es je als Netzwerk-Service exponiert, dort eine URL-Allowlist/SSRF-Schranke ergänzen. Für Stufe 1 kein Handlungsbedarf.
+
+### Regression
+Keine gemeinsamen Artefakte mit PROJ-1 verändert; `lh-audit.sh` schreibt ausschließlich nach
+`<run-dir>/lighthouse/`. `capture.sh`-Ausgabe (`meta.json`, `capture/`) bleibt unberührt (nur lesend
+für die Cookie-Spiegelung). Kein Repo-Pollution durch `runs/`.
+
+### Bugs
+Keine (Critical/High/Medium/Low = 0/0/0/0).
+
+### Production-Ready: **JA** — keine Critical/High-Bugs.
 
 ## Deployment
 _To be added by /abc-deploy_

@@ -1,6 +1,6 @@
 # PROJ-4: Design-Scoring & Report
 
-## Status: In Progress
+## Status: In Review
 **Created:** 2026-07-02
 **Last Updated:** 2026-07-03
 
@@ -118,7 +118,54 @@ scripts/tests/score_report_test.sh    # 43 Assertions, hermetisch (nur jq)
 ```
 
 ## QA Test Results
-_To be added by /abc-qa_
+**Getestet:** 2026-07-03 · **Tester:** QA/Red-Team · **Branch:** `dev`
+**Methode:** hermetische Suite (`score_report_test.sh`, 43 Assertions) + 8 adversariale Probes (P1–P8) gegen `score-report.sh`. Rein CLI (jq/bash) — kein Browser/Backend, daher keine FastAPI/Flutter-/Tenant-Aspekte anwendbar.
+
+### Acceptance Criteria (7/7 bestanden)
+| # | Kriterium | Ergebnis | Beleg |
+|---|---|---|---|
+| 1 | `scores.json`: 5 Dims + Cai-Teilscores + Gesamtscore + Gewichte + Rubrik-Version | ✅ PASS | Test A (visuell/slop/perf/a11y/conv, `weights`, `rubric_version`, Cai-Subscores) |
+| 2 | `report.md` (deutsch): Panel, Befunde (Severity+Beleg+Fundort+Quelle), Empfehlungen, Meta | ✅ PASS | Test A (Score-Panel, Lauf-ID); manuelle Report-Sichtung |
+| 3 | Quelle je Dimension; ausgefallene Messung „nicht messbar" + Renormierung | ✅ PASS | Test A (5 Quellen) + C (LH failed → Perf/A11y nicht messbar, eff. Gewichte 36/21/43, Total 69) |
+| 4 | Versionierte Rubrik mit Anker je 20er-Band; Rubrik-Version im Report + Abgleich | ✅ PASS | `rubrics/{visual,slop,conversion}.md` (Bänder 0–20…81–100), Test H3 (Version-Konflikt → Exit 2) |
+| 5 | Reproduzierbarkeit ±5 bei zwei Läufen | ✅ PASS (Skript-Ebene: Δ=0, deterministisch) | Test D. **Hinweis:** End-to-End-Streuung hängt am Claude-Judge (nicht skriptbar testbar), durch Anker-Rubrik gedämpft |
+| 6 | 5–15 Befunde (Min 3 ab ≥85); Befunde ohne Beleg unzulässig | ✅ PASS | Test A (5), B (unbelegte verworfen), E (Min 3), Probe P3 (>15 → Cap 15, Severity-sortiert) |
+| 7 | Benchmark-Zeile ab n≥10 gleicher Industrie-Tag, sonst ausgeblendet | ✅ PASS (mit Einschränkung, s. BUG-2) | Test F (n=9 aus, n=10 an) |
+
+### Edge Cases (alle abgedeckt)
+Sehr gute Seite ≥85 (Test E) · fehlender CTA (Test G) · App-Modus-Hinweis (Test G) · SPA-Verdacht (Test G) · Judge↔Lighthouse kein Glätten (Design + Report-Footer) · Out-of-range-Scores geclampt (Probe P2: 250→100, ki 15→slop 0) · alle Cai-Teilscores null → conversion nicht messbar + renormiert (Probe P8).
+
+### Input-Gates / Robustheit (Exit 2)
+Kein `judge.json` · Capture `status≠ok` · Rubrik-Version-Konflikt · kein Run-Ordner (Test H, alle Exit 2). `--weights 0,0,0,0,0` → Division-Guard greift, `total:null`, gültiges JSON (Probe P5). Kaputte `runs.jsonl`-Zeile → kein Crash (Probe P4).
+
+### Gefundene Bugs
+**Keine Critical/High.** 2 Medium (Datenintegrität), 3 Low.
+
+- **BUG-1 (Medium) — String-Score wird still zu 100 inflationiert.**
+  Liefert der Judge einen Score als String (z. B. `"visual":{"score":"72"}` — bei LLM-Output plausibel), ergibt `"72" > 100` in jq `true` → `clamp` liefert **100** (Bestwert) statt 72. Der Fehler ist still (kein Abbruch, `scores.json` gültig) und **verfälscht Gesamtscore + PROJ-9-Deltas nach oben**.
+  *Repro:* Probe P1 → `dimensions.visuell.score == 100`.
+  *Fix-Vorschlag (Backend):* numerische Felder vor `clamp` per `tonumber?` koercieren **oder** Nicht-Zahl als „nicht messbar" behandeln/hart ablehnen. Danach Regressionstest P1 als Assertion aufnehmen.
+
+- **BUG-2 (Medium) — Benchmark mischt Rubrik-Versionen.**
+  Die Benchmark-Aggregation filtert nur nach `industry_tag`, **nicht** nach `rubric_version`. Ein Lauf unter `2026.07-1` wird gegen einen Durchschnitt aus Läufen anderer Rubrik-Versionen verglichen → irreführender `delta`. Das widerspricht der Tech-Design-Zusage „jede Rubrik-Änderung = neue Version, damit Benchmarks vergleichbar bleiben"; das Feld `rubric_version` liegt in `runs.jsonl` vor, wird aber ungenutzt.
+  *Repro:* Probe P6 → Benchmark aus `rubric_version:"1999.00-0"`-Zeilen für einen `2026.07-1`-Lauf.
+  *Fix-Vorschlag:* Benchmark-Filter um `.rubric_version == aktuelle Version` erweitern (oder Vergleich pro Version + Vermerk im Report).
+
+- **BUG-3 (Low) — URL unescaped in `report.md`.**
+  `final_url` (von der Zielseite kontrolliert) wird roh in die Report-Überschrift gerendert; Markdown/HTML (`<script>…`, `](javascript:…)`) landet ungefiltert im Deliverable — relevant erst beim späteren HTML/PDF-Rendern (PROJ-7/16).
+  *Repro:* Probe P7. *Fix:* Sonderzeichen in der Titelzeile escapen/strippen.
+
+- **BUG-4 (Low) — Renormierte Gewichte summieren gerundet ggf. auf 101 %.**
+  Unabhängiges Runden der `weights_effective` (z. B. 63 + 38). Rein kosmetisch (Gesamtscore selbst rundet korrekt über die Rohgewichte). *Repro:* Probe P8.
+
+- **BUG-5 (Low) — Eine kaputte `runs.jsonl`-Zeile deaktiviert Benchmark still.**
+  `jq -s` scheitert am ganzen File → Benchmark fällt auf `null` (fail-safe, kein Crash), auch wenn 10 valide Zeilen existieren. *Repro:* Probe P4. *Fix:* zeilenweise robust parsen (`jq -R 'fromjson?'`).
+
+### Regression
+Keine Fremd-Features berührt (reine Neu-Dateien + additive README-/INDEX-Änderungen). PROJ-1/2/3-Skripte unverändert; deren Ausgabekontrakte werden nur gelesen. Offene `scripts/lib/brand-extract.js`-Änderungen (PROJ-3) bewusst nicht angefasst.
+
+### Production-Ready-Bewertung
+**BEDINGT READY.** Keine Critical/High-Bugs → nach Workflow-Rubrik deploybar. **Empfehlung QA:** BUG-1 und BUG-2 vor `/abc-deploy` fixen — beide betreffen Datenintegrität und speisen nachgelagerte Features (PROJ-9-Deltas, PROJ-10-Benchmarks). BUG-3–5 können als Backlog folgen.
 
 ## Deployment
 _To be added by /abc-deploy_

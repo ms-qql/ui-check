@@ -1,6 +1,6 @@
 # PROJ-6: Redesign-Generierung Safe + Bold
 
-## Status: In Progress
+## Status: In Review
 **Created:** 2026-07-02
 **Last Updated:** 2026-07-03
 
@@ -191,7 +191,58 @@ scripts/tests/redesign_test.sh    # 46 Assertions, hermetisch (nur jq)
   nicht skriptbar.
 
 ## QA Test Results
-_To be added by /abc-qa_
+**Getestet:** 2026-07-03 · **Tester:** QA Engineer (Red-Team) · **Branch:** dev  
+**Ergebnis:** READY mit 1 Medium-Bug fuer den naechsten Fix-Zyklus. Keine Critical/High-Bugs.
+
+### Scope
+- Feature-Spec, Tech-Design, Implementation Notes und Run-Ordner-Kontrakt gelesen.
+- Bestehender Echtlauf: `runs/2026-07-03-auxevo.tech-001`.
+- Zusaetzliche E2E-Probe: INIT gegen Kopie von `runs/2026-07-03-nextcontrol.de-001`.
+- Projekt ist CLI/Bash-Pipeline, kein FastAPI/Flutter-Projekt; pytest/Flutter-Schritte aus `abc-qa` sind daher nicht anwendbar. `pytest` ist in der Dashboard-Env verfuegbar (`8.3.3`), `flutter` ist nicht installiert.
+
+### Acceptance Criteria
+| # | Kriterium | Status | Nachweis |
+|---|---|---|---|
+| 1 | `brief.md` vor Generierung mit Conversion-Ziel, CTA, Sektionsplan, Brand-Entscheidungen | Pass | Echtlauf: `brief.md` vorhanden, Gate G2 gruen |
+| 2 | Reihenfolge Struktur → Content → Visuals | Pass | `.claude/skills/ui-redesign/SKILL.md` erzwingt Ablauf; INIT-Kontext vor Content/Visuals |
+| 3 | Skill-Sandwich / Rezepte / Anti-Slop dokumentiert | Pass | `recipes/{safe,bold}.md`, `brief.md` Anti-Slop, Gates G10-G12 |
+| 4 | Token-Treue, deutsche Copy, keine erfundenen Claims | Pass | Gates G3/G6/G8 gruen; manuelle Pruefung von `content.json` |
+| 5 | Komponenten + assetfreie Backgrounds, keine Bild-API-Pflicht | Pass | Vendored Komponenten vorhanden; `images.md` nur Prompt/Platzhalter |
+| 6 | Output `redesign/safe/` + `redesign/bold/` als React-Komponenten | Pass mit Hinweis | Struktur + Imports vorhanden; echter Bundle-Build bleibt bewusst PROJ-7-Gate |
+| 7 | Bild-Slots mit Platzhalter + Bild-Prompt | Pass | Gate G9 gruen; `images.md` deckt `hero-bild` |
+
+### Edge Cases
+| Fall | Status | Nachweis |
+|---|---|---|
+| Kein CTA im Original | Pass | Skill-Anweisung + hermetische Tests pruefen Annahme-/CTA-Kontrakt indirekt ueber Content/CTA-Gates |
+| Markenkontrast kollidiert mit Lesbarkeit | Pass | Brief des Echtlaufs dokumentiert Kontrastentscheidung; G6 erlaubt nur Tokens bzw. `tokens-extra.json` |
+| Sehr wenig Original-Content | Pass | Skill-Anweisung verlangt reduzierte Planung ohne erfundene Leistungen; G8 verhindert Filler-Reste |
+| `--prompt` widerspricht Branding | Pass | Skill-Anweisung dokumentiert Vorrang + Abweichungspflicht; INIT reicht `user_prompt` in Kontext durch |
+
+### Automatisierte Tests
+| Suite | Ergebnis |
+|---|---|
+| `scripts/tests/redesign_test.sh` | 46 bestanden, 0 fehlgeschlagen |
+| `scripts/tests/capture_test.sh` | 45 bestanden, 0 fehlgeschlagen |
+| `scripts/tests/lh_audit_test.sh` | 38 bestanden, 0 fehlgeschlagen |
+| `scripts/tests/brand_extract_test.sh` | 60 bestanden, 0 fehlgeschlagen |
+| `scripts/tests/score_report_test.sh` | 50 bestanden, 0 fehlgeschlagen |
+| `scripts/tests/ui_check_test.sh` | 48 bestanden, 0 fehlgeschlagen |
+| `scripts/redesign.sh --verify runs/2026-07-03-auxevo.tech-001` | 14 Gates ok, 0 Warnungen, 0 Fehler |
+
+### Security / Red-Team
+- Auth, JWT, Tenant-Isolation, Rate-Limiting und MinIO sind fuer PROJ-6 nicht anwendbar: kein Backend, keine Nutzer-/Mandanten-Daten, keine Objekt-Storage-Operation.
+- Keine gefaehrlichen React-Patterns im Echtlauf gefunden (`dangerouslySetInnerHTML`, `eval`, `innerHTML`, externe Fetches).
+- Kein Google-Fonts-CDN und keine externen Assets im Redesign-Output (Gate G7 gruen).
+- Keine Secrets/API-Keys im Redesign-Output gefunden.
+
+### Bugs
+| ID | Severity | Titel | Reproduktion | Erwartet | Ist |
+|---|---|---|---|---|---|
+| PROJ-6-BUG-1 | Medium | Dependency-Whitelist ignoriert `devDependencies` | In `runs/2026-07-03-auxevo.tech-001/redesign/*/package.json` stehen `vite` und `@vitejs/plugin-react` in `devDependencies`; danach `scripts/redesign.sh --verify runs/2026-07-03-auxevo.tech-001` ausfuehren | G13 warnt auch bei unerwarteten `devDependencies` oder dokumentiert explizit, dass nur Runtime-Dependencies geprueft werden | Verify bleibt vollstaendig gruen; G13 existiert nicht im `verify.json`, weil nur `.dependencies` gelesen wird |
+
+### Production-Ready Decision
+**READY.** Keine Critical- oder High-Bugs. PROJ-6 kann fuer PROJ-7 genutzt werden; PROJ-6-BUG-1 sollte vor Deployment/Bundle-Hardening gefixt werden, blockiert den aktuellen QA-Status aber nicht.
 
 ## Deployment
 _To be added by /abc-deploy_

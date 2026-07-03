@@ -1,8 +1,8 @@
 # PROJ-2: Lighthouse-Audit
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-07-02
-**Last Updated:** 2026-07-02
+**Last Updated:** 2026-07-03
 
 ## Dependencies
 - None (parallel zu PROJ-1 lauffähig; gleiche Ziel-URL)
@@ -59,6 +59,48 @@ lighthouse/
 
 ### Dependencies
 - `lighthouse` (npm, global)
+
+## Implementation Notes (Backend)
+**Umgesetzt:** 2026-07-03 · **Branch:** dev · **Artefakt:** `scripts/lh-audit.sh`
+
+### Was gebaut wurde
+- **`scripts/lh-audit.sh`** — Bash-CLI im Stil von `capture.sh`. Kontrakt:
+  `lh-audit.sh <url> [--out <run-dir>] [--desktop] [--timeout 120]`.
+  Schreibt `<run-dir>/lighthouse/{lighthouse-mobile.json, lighthouse-desktop.json*, lh-summary.json, lighthouse.log}`.
+- **Lighthouse-CLI 13.4.0** global installiert (`npm i -g lighthouse`); Mobile ist
+  Default, Desktop via `--preset=desktop` bei `--desktop`. Chrome über `CHROME_PATH`
+  (Fallback-Suche `chrome`/`google-chrome`/`chromium`); nutzt hier das
+  Playwright-Chromium (`~/.local/bin/chrome`, Chrome-for-Testing 147).
+- **`lh-summary.json`** via `jq` extrahiert: 4 Kategorie-Scores (0–100), CWV
+  (LCP/CLS/TBT/FCP/Speed-Index) mit Rohwert **und** Google-Rating
+  (good/needs-improvement/poor), Top-5-Opportunities (nur `overallSavingsMs > 0`,
+  absteigend), `form_factors`, optional `.desktop`-Block, Meta (timestamp,
+  duration, lighthouse_version).
+- **Degradation statt Abbruch:** Timeout (`timeout 120s` → Exit 124), Lighthouse-
+  Exit≠0 oder `.runtimeError` → `lh-summary.json` mit `status:"failed"` + deutschem
+  `error`-Grund, Exit 1. Erfolg → `status:"ok"`, Exit 0.
+- **Cookie-Banner-Spiegelung:** liest `<run-dir>/meta.json` aus PROJ-1 und
+  übernimmt `cookie_banner`; nicht geschlossenes Banner → Consent-Warnung in
+  `note`. Ohne capture-meta bleibt `cookie_banner: null`.
+- **`scripts/tests/lh_audit_test.sh`** — Black-Box-Suite gegen `serve_fixtures.py`
+  (echtes Lighthouse, lokale Fixtures). **38/38 Tests grün.**
+- `scripts/README.md` um den `lh-audit.sh`-Abschnitt + Voraussetzung `lighthouse` ergänzt.
+
+### Abdeckung Acceptance Criteria
+- [x] Mobile-Default + optional `--desktop` → getrennte Voll-Reports
+- [x] `lh-summary.json` mit 4 Scores, 5 CWV inkl. Google-Bewertung
+- [x] Top-5-Opportunities mit `savings_ms`
+- [x] Absturz/Timeout → `status:failed` + Grund, Pipeline läuft weiter (Exit 1)
+- [x] Keine Google-API/kein API-Key (lokale CLI)
+- [x] Edge: Cookie-Vermerk aus PROJ-1 gespiegelt
+
+### Entscheidungen/Abweichungen
+- Timeout-Default aus dem Tech-Design (120 s) als `--timeout` überschreibbar.
+- Desktop-Werte werden nicht in die Top-Level-Scores gemischt, sondern liegen
+  unter `.desktop` — Mobile bleibt kanonisch (Google-Primärindex).
+- Zusätzlich `lighthouse.log` (Roh-Stderr) für Diagnose bei `failed`.
+- Manuelle Prüfung noch offen: Lauf gegen echte Consent-Wall-Seite + sehr
+  langsame SPA (Timeout-Pfad) im Feld — mit lokalen Fixtures nur simuliert.
 
 ## QA Test Results
 _To be added by /abc-qa_

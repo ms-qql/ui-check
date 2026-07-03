@@ -18,7 +18,7 @@
 | PROJ-11 | [Komponenten-Registry & Recycling](PROJ-11-komponenten-registry.md) | P2 | 3 | Planned | PROJ-6 |
 | PROJ-12 | [Branding-Profil-Bibliothek](PROJ-12-branding-bibliothek.md) | P2 | 3 | Planned | PROJ-3 |
 | PROJ-13 | [Portfolio-Assembler](PROJ-13-portfolio-assembler.md) | P2 | 3 | Planned | PROJ-7, PROJ-11, PROJ-12 |
-| PROJ-14 | [Jupiter-MicroApp-UI](PROJ-14-jupiter-microapp-ui.md) | P2 | 3 | Planned | PROJ-5 (+6–9 sinnvoll) |
+| PROJ-14 | [Jupiter-MicroApp-UI](PROJ-14-jupiter-microapp-ui.md) | P2 | 3 | Architected | PROJ-5 (+6–9 sinnvoll) |
 | PROJ-15 | [Feedback-Pins im Mockup](PROJ-15-feedback-pins.md) | P3 | 4 | Planned | PROJ-7, PROJ-8 |
 | PROJ-16 | [Kunden-PDF](PROJ-16-kunden-pdf.md) | P3 | 4 | Planned | PROJ-4 |
 | PROJ-17 | [App-Modus (Flow-Walk)](PROJ-17-app-modus.md) | P3 | 4 | Planned | PROJ-1, PROJ-4 |

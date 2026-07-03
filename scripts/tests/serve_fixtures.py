@@ -89,6 +89,35 @@ BRAND_LOGO_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
 )
 
+# 14 klar unterscheidbare Farbflächen -> Clustering-/Extended-Test (>12 Farben).
+_MANY = ["#e11d48", "#db2777", "#c026d3", "#9333ea", "#7c3aed", "#4f46e5",
+         "#2563eb", "#0891b2", "#059669", "#16a34a", "#65a30d", "#ca8a04",
+         "#ea580c", "#dc2626"]
+MANYCOLORS_BODY = "".join(
+    f'<div style="background:{c};color:#fff;padding:20px">Block {i}</div>'
+    for i, c in enumerate(_MANY)
+) + "<p>Abschlusstext für Kontrast.</p>"
+
+# Dunkler Default-Zustand -> dark_mode_hint + Vermerk.
+DARKMODE_EXTRA = (
+    "<style>body{background:#0a0a0a;color:#e5e7eb;font-family:Arial}"
+    "a{color:#60a5fa}</style>"
+)
+DARKMODE_BODY = (
+    "<header><h1>Dunkles Design</h1></header>"
+    "<main><p>Heller Text auf dunklem Grund.</p>"
+    '<a href="/x">Ein Link</a></main>'
+)
+
+# Nur Inline-SVG-Logo im Header, kein <img> -> DOM-SVG-Pfad.
+SVGLOGO_BODY = (
+    '<header><a href="/"><svg class="logo" width="120" height="40" '
+    'viewBox="0 0 120 40" xmlns="http://www.w3.org/2000/svg">'
+    '<rect width="120" height="40" fill="#1d4ed8"></rect>'
+    '<text x="10" y="26" fill="#fff">ACME</text></svg></a></header>'
+    "<main><h1>Seite mit SVG-Logo</h1><p>Etwas Inhalt hier.</p></main>"
+)
+
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):  # keine Logzeilen ins Test-Output
@@ -118,6 +147,12 @@ class Handler(BaseHTTPRequestHandler):
             self._html(200, "SPA", SPA_BODY)
         elif p == "/branding":
             self._html(200, "ACME Branding", BRANDING_BODY, BRANDING_EXTRA)
+        elif p == "/manycolors":
+            self._html(200, "Viele Farben", MANYCOLORS_BODY)
+        elif p == "/darkmode":
+            self._html(200, "Dark Mode", DARKMODE_BODY, DARKMODE_EXTRA)
+        elif p == "/svglogo":
+            self._html(200, "SVG Logo", SVGLOGO_BODY)
         elif p == "/brand-logo.png":
             self.send_response(200)
             self.send_header("Content-Type", "image/png")

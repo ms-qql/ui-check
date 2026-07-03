@@ -136,6 +136,35 @@ assert_eq "$(mj '.logo.source' "$R")" "null" "logo.source == null"
 assert_file "$R/branding/tokens.json" "tokens.json trotz fehlendem Logo erzeugt"
 grep -qi "logo: null" "$R/branding/branding.md" && ok "branding.md vermerkt logo: null (kein Fehler)" || bad "logo-null-Vermerk fehlt"
 
+# ── Edge E: Clustering / Extended-Palette (>12 Farben) ─────────────────────
+echo; echo "▶ E: /manycolors → Kern-Palette ≤ 8, Rest als extended"
+R="$WORK/many"
+bash "$BE" "$BASE/manycolors" --out "$R" --timeout 60 >"$WORK/many.out" 2>&1
+[[ "$(rj '(.colors // []) | length' "$R")" -gt 12 ]] && ok "mehr als 12 Farben erkannt ($(rj '(.colors // []) | length' "$R"))" || bad "erwartete >12 Farben"
+palN="$(tj '.color.palette | length' "$R")"
+[[ "$palN" =~ ^[0-9]+$ && "$palN" -le 8 ]] && ok "Kern-Palette ≤ 8 ($palN)" || bad "Kern-Palette > 8: $palN"
+[[ "$(tj '.color.extended | length' "$R")" -ge 1 ]] && ok "extended-Palette befüllt" || bad "extended-Palette leer trotz >12 Farben"
+jq -e . "$R/branding/tokens.json" >/dev/null 2>&1 && ok "tokens.json gültiges JSON" || bad "tokens.json ungültig"
+
+# ── Edge F: Inline-SVG-Logo (DOM-SVG-Pfad, kein <img>) ─────────────────────
+echo; echo "▶ F: /svglogo → Inline-SVG als logo.svg gesichert"
+R="$WORK/svg"
+bash "$BE" "$BASE/svglogo" --out "$R" --timeout 60 >"$WORK/svg.out" 2>&1
+assert_eq "$?" "0" "Exit-Code 0 (Logo gefunden)"
+assert_file "$R/branding/logo.svg" "logo.svg aus Inline-SVG geschrieben"
+assert_eq "$(mj '.logo.source' "$R")" "dom" "logo.source == dom (SVG)"
+grep -qi "<svg" "$R/branding/logo.svg" && ok "logo.svg enthält SVG-Markup" || bad "logo.svg ohne SVG-Markup"
+
+# ── Edge G: Dark-Mode-Default erkannt + vermerkt ───────────────────────────
+echo; echo "▶ G: /darkmode → dark_mode-Vermerk (Default-Zustand extrahiert)"
+R="$WORK/dark"
+bash "$BE" "$BASE/darkmode" --out "$R" --timeout 60 >"$WORK/dark.out" 2>&1
+assert_eq "$(mj '.dark_mode' "$R")" "true" "branding-meta.dark_mode == true"
+assert_eq "$(rj '.dark_mode_hint' "$R")" "true" "raw dark_mode_hint == true"
+grep -qi "Dark-Mode" "$R/branding/branding.md" && ok "branding.md vermerkt Dark-Mode" || bad "Dark-Mode-Vermerk fehlt"
+jq -e . "$R/branding/tokens.json" >/dev/null 2>&1 && ok "tokens.json trotz Dark-Mode gültig" || bad "tokens.json ungültig (Dark-Mode)"
+# Bekannte Einschränkung (BUG-1, Medium): surface/text-Rolle bleibt im Dark-Mode leer.
+
 # ── Edge D: Argument-Validierung (Exit 2) ──────────────────────────────────
 echo; echo "▶ D: Argument-Validierung (interner Fehler → Exit 2)"
 bash "$BE" >"$WORK/noarg.out" 2>&1

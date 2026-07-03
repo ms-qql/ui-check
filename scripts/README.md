@@ -270,6 +270,75 @@ data/runs.jsonl          + 1 Zeile (append-only, nur URL-Hash — s. data/README
 - **Rubriken** liegen versioniert in `rubrics/` (`visual.md`, `slop.md`, `conversion.md`,
   `VERSION`); jede Änderung = neue Version (Benchmark-Vergleichbarkeit).
 
+## `ui-check.sh` — Skill-Orchestrierung (PROJ-5)
+
+Deterministischer Treiber, den der Claude-Code-Skill `ui-check`
+(`.claude/skills/ui-check/SKILL.md`) aufruft. Führt die vier Schritt-CLIs in
+korrekter Reihenfolge (Capture ∥ Lighthouse parallel, dann Branding) aus,
+verwaltet den Run-Ordner + `status.json` und wendet die zentrale Fehlerpolitik
+an. Die eigentliche Bewertung (der **Judge**) ist Claude selbst; sie liegt
+zwischen den beiden Treiber-Modi.
+
+```bash
+# 1) COLLECT — Datenerfassung
+scripts/ui-check.sh <url> [--industry <tag>] [--prompt "…"] [--desktop] [--out <run-dir>] [--timeout 60]
+# 2) (Claude) Judge-Pass gegen rubrics/ → <run-dir>/judge.json
+# 3) FINALIZE — Scoring & Report
+scripts/ui-check.sh --finalize <run-dir> [--industry <tag>] [--weights v,s,p,a,c]
+```
+
+- `<url>` — Ziel-URL (Protokoll optional).
+- `--industry <tag>` — Branchen-Tag für Benchmark/`runs.jsonl`. Fehlt er, wird
+  `industry_source: "auto"` vermerkt (Claude schlägt den Tag im Skill vor).
+- `--prompt "…"` — Nutzer-Kontext, in `ui-check.json` abgelegt und an den Judge
+  durchgereicht.
+- `--desktop` — zusätzlicher Lighthouse-Desktop-Lauf.
+- `--out` / `--timeout` — Run-Ordner erzwingen bzw. Preflight-/Ladezeit.
+
+### Ausgabe (Run-Ordner-Kontrakt, zusätzlich zu PROJ-1–4)
+
+```
+<run-dir>/status.json    Lauf-Status + je-Phase (capture/lighthouse/branding/scoring):
+                         status · duration_seconds · error — Fortschrittsquelle für Jupiter (PROJ-14)
+<run-dir>/ui-check.json  Kontext: url, final_url, industry_tag(+source), user_prompt,
+                         desktop, rubric_version — Brücke Collect → Judge → Finalize
+<run-dir>/.{capture,lighthouse,branding}.log   Roh-Stdout/-Stderr der Schritte (Diagnose)
+```
+
+### Fehlerpolitik (zentral im Orchestrator)
+
+| Schritt | Fehler | Verhalten |
+|---|---|---|
+| Capture | Exit ≠ 0 | **Abbruch** des Laufs (`status: aborted`, Exit 2) — nichts zu bewerten. |
+| Lighthouse | Exit ≠ 0 / `status: failed` | degradieren: Perf/A11y „nicht messbar", renormiert (Exit 1). |
+| Branding | Exit ≠ 0 | degradieren: Vermerk, Lauf läuft weiter (Exit 1). |
+| Scoring | score-report Exit 1 / 2 | Exit 1 (degradiert) bzw. Exit 2 (Gate) durchgereicht. |
+
+### Exit-Codes
+
+| Code | Bedeutung |
+|---|---|
+| `0` | Lauf vollständig, alle Dimensionen messbar |
+| `1` | Teilfehler: Lauf nutzbar, aber degradiert (Dimension „nicht messbar") |
+| `2` | Abbruch: Capture-Fehler, Input-Gate, ungültige Argumente, fehlendes Tool |
+
+### Verhalten
+
+- **Parallelität:** Capture und Lighthouse starten gleichzeitig (beide brauchen nur
+  die URL, gleicher Run-Ordner); Branding folgt nach Capture; Scoring erst nach dem
+  Judge-Pass.
+- **Preflight:** prüft `agent-browser`, `lighthouse`, `jq`, `curl` + die vier
+  Schritt-Skripte **vor** jeder Arbeit — deutsche Installationsanleitung statt Crash
+  mitten im Lauf.
+- **Headless:** bei vollständigen Parametern keine interaktiven Abfragen; `status.json`
+  + Exit-Codes steuern den aufrufenden Prozess (Jupiter/PROJ-14).
+- **Kollisionssicherheit:** NNN-Suffix pro Tag/Domain (wie `capture.sh`); parallele
+  Läufe kollidieren nicht; `runs.jsonl`-Append (durch `score-report.sh`) ist zeilenatomar.
+- **Ctrl-C:** Run-Ordner bleibt mit `status: aborted` in `status.json` erhalten.
+- **Testbarkeit:** `UI_CHECK_BIN` lenkt die Schritt-CLIs auf ein Stub-Verzeichnis um
+  (siehe `scripts/tests/ui_check_test.sh`) — hermetischer Orchestrierungs-Test ohne
+  Browser/Lighthouse/Netz.
+
 ## Voraussetzungen
 
 - **jq** genügt für `score-report.sh` (PROJ-4) — kein Browser/Lighthouse nötig.

@@ -339,6 +339,87 @@ scripts/ui-check.sh --finalize <run-dir> [--industry <tag>] [--weights v,s,p,a,c
   (siehe `scripts/tests/ui_check_test.sh`) — hermetischer Orchestrierungs-Test ohne
   Browser/Lighthouse/Netz.
 
+## `redesign.sh` — Redesign-Generierung Safe+Bold (PROJ-6, Stufe 2)
+
+Deterministischer Treiber, den der Claude-Code-Skill `ui-redesign`
+(`.claude/skills/ui-redesign/SKILL.md`) aufruft. Die Generierung selbst
+(Brief → Struktur/Content → Visuals) macht Claude anhand der versionierten
+Rezepte in `recipes/` — der Treiber übernimmt Scaffold, Kontext-Bündelung
+und alle deterministischen Gates (Generator-Sandwich, analog PROJ-5).
+
+```bash
+# 1) INIT — Gate + Scaffold + Kontext
+scripts/redesign.sh <run-dir> [--force]
+# 2) (Claude) Brief-Pass       → redesign/brief.md
+# 3) (Claude) Struktur/Content → redesign/shared/content.json + redesign/compare.json
+# 4) (Claude) Visual-Pass ×2   → redesign/safe/ + redesign/bold/ + redesign/images.md
+# 5) VERIFY — deterministische Gates
+scripts/redesign.sh --verify <run-dir>
+```
+
+- `<run-dir>` — abgeschlossener Stufe-1-Lauf (`scores.json` + `branding/` Pflicht).
+- `--force` — Re-INIT: überschreibt `shared/` + `redesign-context.json`,
+  bereits generierte Inhalte bleiben.
+
+### Ausgabe (Run-Ordner-Kontrakt)
+
+```
+<run-dir>/redesign/
+├── redesign-context.json   INIT: Scores + Cai-Teilscores, Top-Befunde, Branding-Lage,
+│                           user_prompt, Rezept-/Rubrik-Version, degraded/notes
+├── brief.md                Brief-Pass (Pflicht-Abschnitte: Conversion-Ziel, Primärer CTA,
+│                           Sektionsplan, Brand-Entscheidungen, Anti-Slop-Constraints)
+├── compare.json            Zuordnung Original↔Redesign je Sektion + 1-Satz-Begründung (PROJ-8)
+├── images.md               je Bild-Slot: Platzhalter-Vermerk + fertiger Bild-Prompt
+├── shared/                 content.json (Sektionen + deutsche Copy, ein Content für beide
+│                           Varianten) · tokens.json + tailwind-theme.css (eingefroren) ·
+│                           optional tokens-extra.json (im Brief begründete Zusatzfarben)
+├── safe/ · bold/           buildfähige React-Varianten: App.jsx, sections/, components/,
+│                           manifest.json (variant, recipe_version, dials, sections[].layout),
+│                           package.json (Dependency-Whitelist)
+└── verify.json             Gate-Ergebnis (grün/gelb/rot je Check)
+```
+
+### Verify-Gates (deterministisch)
+
+| Gate | Prüfung | rot ⇒ Exit 2 |
+|---|---|---|
+| G1 | Ordner-/Datei-Struktur vollständig | ✓ |
+| G2 | `brief.md` enthält alle Pflicht-Abschnitte | ✓ |
+| G3 | `content.json`-Kontrakt (sections, ids, primary_cta); Sprache ≠ de nur Warnung | ✓ |
+| G4 | `compare.json` deckt alle Sektionen mit Begründung | ✓ |
+| G5 | Manifeste: variant, `recipe_version` == `recipes/VERSION`, entry, sections | ✓ |
+| G6 | Token-Lint: Hex-Farben ⊆ Tokens ∪ `tokens-extra.json` ∪ #fff/#000; keine Tailwind-Default-Palette (`bg-blue-500` …); rgb()/hsl()-Literale nur Warnung | ✓ |
+| G7 | kein Google-Fonts-CDN (DSGVO) | ✓ |
+| G8 | keine Lorem-/TODO-/FIXME-Reste | ✓ |
+| G9 | Bild-Slots: content.json ↔ `images.md` ↔ `data-image-slot` im Code | ✓ |
+| G10 | CTA-Länge: primär ≤ 3 Wörter, Sektions-CTAs ≤ 4 (Wrap-Ban) | ✓ |
+| G11 | ein CTA-Label pro `intent` (ganze Seite) | ✓ |
+| G12 | Zigzag-Cap: max. 2 × `split`-Layout in Folge, je Variante | ✓ |
+| G13 | npm-Dependency-Whitelist | nur Warnung |
+
+### Exit-Codes
+
+| Code | Bedeutung |
+|---|---|
+| `0` | INIT vollständig bzw. alle Gates grün |
+| `1` | degradiert: INIT mit Vermerk (leere Palette) bzw. nur Warn-Gates |
+| `2` | Abbruch: Stufe-1-Lauf unvollständig, ungültige Argumente, ≥ 1 Pflicht-Gate rot |
+
+### Verhalten
+
+- **Rangordnung Markentreue:** Tokens + `brief.md` > Nutzer-Prompt > Rezept.
+  Farbabweichungen nur über `shared/tokens-extra.json` mit Begründung — der
+  Token-Lint erzwingt das.
+- **Rezept-Versionierung:** `recipes/VERSION` wird in Kontext + Manifeste
+  eingefroren; Konflikt ⇒ Gate rot (analog Rubrik-Gate in PROJ-4).
+- **status.json:** führt `phases.redesign` (`awaiting_generation` →
+  `ok|degraded|failed`) für Jupiter (PROJ-14) fort.
+- **Buildbarkeit** prüft bewusst erst PROJ-7 (web-artifacts-builder) — hier
+  nur statisch prüfbare Kontrakte.
+- **Testbarkeit:** `scripts/tests/redesign_test.sh` — hermetische Suite
+  (46 Assertions) mit Fixture-Läufen, ohne Browser/Netz/Claude.
+
 ## Voraussetzungen
 
 - **jq** genügt für `score-report.sh` (PROJ-4) — kein Browser/Lighthouse nötig.

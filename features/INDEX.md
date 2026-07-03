@@ -10,9 +10,9 @@
 | PROJ-3 | [Branding-Extraktion](PROJ-3-branding-extraktion.md) | P0 | 1 | Deployed | PROJ-1 |
 | PROJ-4 | [Design-Scoring & Report](PROJ-4-design-scoring-report.md) | P0 | 1 | Deployed | PROJ-1, PROJ-2, PROJ-3 |
 | PROJ-5 | [Skill-Orchestrierung (`ui-check`)](PROJ-5-skill-orchestrierung.md) | P0 | 1 | Deployed | PROJ-1–4 |
-| PROJ-6 | [Redesign-Generierung Safe+Bold](PROJ-6-redesign-generierung.md) | P1 | 2 | Architected | PROJ-3, PROJ-4, PROJ-5 |
-| PROJ-7 | [Mockup-Export (HTML)](PROJ-7-mockup-export-html.md) | P1 | 2 | Planned | PROJ-6 |
-| PROJ-8 | [Vorher/Nachher & Voting](PROJ-8-vorher-nachher-voting.md) | P1 | 2 | Planned | PROJ-1, PROJ-7 |
+| PROJ-6 | [Redesign-Generierung Safe+Bold](PROJ-6-redesign-generierung.md) | P1 | 2 | In Progress | PROJ-3, PROJ-4, PROJ-5 |
+| PROJ-7 | [Mockup-Export (HTML)](PROJ-7-mockup-export-html.md) | P1 | 2 | Architected | PROJ-6 |
+| PROJ-8 | [Vorher/Nachher & Voting](PROJ-8-vorher-nachher-voting.md) | P1 | 2 | Architected | PROJ-1, PROJ-7 |
 | PROJ-9 | [Nachher-Scoring (Score-Delta)](PROJ-9-nachher-scoring.md) | P1 | 2 | Planned | PROJ-4, PROJ-7 |
 | PROJ-10 | [Batch-Audit (Kaltakquise)](PROJ-10-batch-audit.md) | P1 | 2 | Planned | PROJ-5 |
 | PROJ-11 | [Komponenten-Registry & Recycling](PROJ-11-komponenten-registry.md) | P2 | 3 | Planned | PROJ-6 |

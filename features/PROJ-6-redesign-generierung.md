@@ -1,6 +1,6 @@
 # PROJ-6: Redesign-Generierung Safe + Bold
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-07-02
 **Last Updated:** 2026-07-03
 
@@ -78,6 +78,9 @@ Beide Varianten teilen Content + Tokens; nur Layout-Rezept und Animations-Level 
 ```
 <run-dir>/redesign/
 ├── brief.md          Redesign-Brief (siehe Brief-Pass) — Pflicht vor Generierung
+├── compare.json      Sektionsplan maschinenlesbar: Zuordnung Original↔Redesign-Sektion
+│                     + 1-Satz-Begründung je Sektion (ergänzt durch PROJ-8-Design;
+│                     Konsument: Sektionsvergleich in mockup.html)
 ├── images.md         je Bild-Slot: Platzhalter-Vermerk + fertiger Bild-Prompt
 ├── shared/           content.json (Sektionen + deutsche Copy) · Kopie tokens.json
 │                     + tailwind-theme.css (eingefrorener Stand dieses Laufs)
@@ -109,6 +112,83 @@ recipes/  (im Repo, versioniert wie rubrics/)
 ### Dependencies
 - Keine neuen System-Tools (Generator = Claude; Treiber = bash/jq wie gehabt)
 - npm-Abhängigkeiten werden nur **in den generierten Varianten deklariert** (react, motion, optional `@paper-design/shaders-react`, tailwindcss); installiert/gebaut wird erst in PROJ-7
+
+## Implementation Notes (Backend)
+**Umgesetzt:** 2026-07-03 · **Branch:** dev
+
+### Gelieferte Artefakte
+- **`scripts/redesign.sh`** — deterministischer Treiber mit zwei Modi:
+  - **INIT** (`<run-dir> [--force]`): Stufe-1-Gate (meta.json ok + scores.json +
+    branding/) → Scaffold `redesign/` (shared/-Kopien von tokens.json +
+    tailwind-theme.css) → `redesign-context.json` (Scores + Cai-Teilscores,
+    Top-Befunde, Branding-Lage, user_prompt, Rezept-Version). Leere Palette ⇒
+    Exit 1 (degradiert) mit `notes`.
+  - **VERIFY** (`--verify <run-dir>`): 13 deterministische Gates (G1–G13, siehe
+    `scripts/README.md`) → `redesign/verify.json`; rote Gates ⇒ Exit 2,
+    nur Warnungen ⇒ Exit 1. Führt `status.json` → `phases.redesign` fort (Jupiter).
+- **`recipes/`** — versionierte Rezepte (`VERSION` `2026.07-1`, `safe.md`,
+  `bold.md`, `README.md`): Drei-Dial-Kalibrierung (Safe 3/2 · Bold 8/7),
+  Layout-Familien, kuratiertes Effekt-Vokabular (Bold), Anti-Slop-Regeln;
+  destilliert aus Taste-Skill v2 + gstack-Slop-Blacklist + cinematic-Modulen
+  (Quellen im README). Rangordnung Tokens+Brief > Nutzer-Prompt > Rezept.
+- **`.claude/skills/ui-redesign/SKILL.md`** — Orchestrator-Anweisung für Claude:
+  INIT → Brief-Pass → Struktur/Content-Pass (content.json + compare.json) →
+  Visual-Pass ×2 (Rezepte) → Verify → deutscher Bericht. Enthält alle
+  Kontrakt-Schemata (content.json, compare.json, manifest.json, images.md,
+  tokens-extra.json) + Edge-Case-Behandlung im Brief.
+- **`scripts/tests/redesign_test.sh`** — hermetische QA-Suite (**46 Assertions,
+  alle grün**): INIT Happy Path/Gates/Degradierung, Verify komplett grün, je ein
+  Rot-Fall pro Gate (Off-Token-Hex, Tailwind-Default-Palette, Google-Fonts,
+  Lorem, Slot-Deckung beidseitig, CTA-Länge, Intent-Duplikat, Zigzag,
+  Brief-Abschnitt, Rezept-Versions-Konflikt, compare-Lücke), Warn-Fälle
+  (Dependency-Whitelist, Sprache), status.json-Fortschreibung.
+- **`scripts/README.md`** — `redesign.sh`-Abschnitt inkl. Gate-Tabelle + Kontrakte.
+
+### Kontrakt-Erweiterungen (Run-Ordner)
+`<run-dir>/redesign/`: `redesign-context.json` · `brief.md` · `compare.json`
+(PROJ-8-Input) · `images.md` · `shared/` (content.json, eingefrorene Tokens,
+optional tokens-extra.json) · `safe/` + `bold/` (App.jsx, manifest.json,
+package.json) · `verify.json`.
+
+### Entscheidungen / Abweichungen
+- **CTA-Einzeiligkeit als Wortlimit:** „CTA-Text einzeilig" ist statisch nicht
+  render-prüfbar — mechanisches Proxy-Gate: primäres Label ≤ 3 Wörter,
+  Sektions-CTAs ≤ 4 (Taste-Pre-Flight-Regel).
+- **Zigzag-/Layout-Prüfung über `manifest.json`:** Layout-Familien sind im
+  Manifest deklariert (nicht aus JSX geraten) — deterministisch prüfbar und
+  zugleich Registry-Metadaten für PROJ-11.
+- **CTA-Intents deklarativ:** jedes CTA in content.json trägt `intent`;
+  Gate erzwingt ein Label pro Intent (statt semantischer Intent-Erkennung).
+- **`compare.json` schon in PROJ-6 gegated** (G4), da per PROJ-8-Design Teil
+  des Redesign-Kontrakts.
+- **Dependency-Whitelist nur Warnung** (G13): PROJ-7 entscheidet beim Build,
+  was wirklich bundelbar ist.
+
+### Acceptance Criteria — Abdeckung
+- [x] `brief.md` vor Generierung (Pflicht-Abschnitte, Gate G2; Reihenfolge im Skill fest)
+- [x] Struktur → Content → Visuals als getrennte Pässe im Skill-Ablauf
+- [x] Skill-Sandwich: Rezepte (Taste-Destillat, Bold hoch/Safe niedrig) +
+  Anti-Slop aus `rubrics/slop.md`, je Lauf in `brief.md` dokumentiert (G2)
+- [x] Token-Treue erzwungen (G6 inkl. Tailwind-Default-Palette-Ban);
+  deutsche Texte (G3b) + „nichts erfinden" (Skill + G8)
+- [x] Komponenten shadcn/Magic UI/Aceternity als Vendoring; Backgrounds
+  assetfrei (Rezept + Effekt-Whitelist, keine Bild-API)
+- [x] Output `redesign/safe/` + `redesign/bold/` als React-Komponenten
+  (Struktur-Gate G1; **Buildbarkeit verifiziert erst PROJ-7**)
+- [x] `images.md`: Platzhalter + Bild-Prompt je Slot, Deckung beidseitig (G9)
+- [x] Edge Cases im Skill-Ablauf: kein CTA (Annahme), Kontrast-Kollision
+  (tokens-extra.json), wenig Content, Prompt-vs-Branding
+
+### Test ausführen
+```bash
+scripts/tests/redesign_test.sh    # 46 Assertions, hermetisch (nur jq)
+```
+
+### Offen für QA (/abc-qa)
+- End-to-End-Lauf gegen einen echten Run-Ordner (INIT + echte Claude-Pässe +
+  Verify) — die hermetische Suite testet den Treiber, nicht die Generierung.
+- Bewertung der Rezept-Qualität (Safe/Bold-Differenzierung) ist Judge-/QA-Arbeit,
+  nicht skriptbar.
 
 ## QA Test Results
 _To be added by /abc-qa_

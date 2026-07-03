@@ -7,7 +7,7 @@
 |---|---|---|---|---|---|
 | PROJ-1 | [Seiten-Erfassung (Capture)](PROJ-1-seiten-erfassung.md) | P0 | 1 | Approved | — |
 | PROJ-2 | [Lighthouse-Audit](PROJ-2-lighthouse-audit.md) | P0 | 1 | Approved | — |
-| PROJ-3 | [Branding-Extraktion](PROJ-3-branding-extraktion.md) | P0 | 1 | Architected | PROJ-1 |
+| PROJ-3 | [Branding-Extraktion](PROJ-3-branding-extraktion.md) | P0 | 1 | In Progress | PROJ-1 |
 | PROJ-4 | [Design-Scoring & Report](PROJ-4-design-scoring-report.md) | P0 | 1 | Architected | PROJ-1, PROJ-2, PROJ-3 |
 | PROJ-5 | [Skill-Orchestrierung (`ui-check`)](PROJ-5-skill-orchestrierung.md) | P0 | 1 | Architected | PROJ-1–4 |
 | PROJ-6 | [Redesign-Generierung Safe+Bold](PROJ-6-redesign-generierung.md) | P1 | 2 | Planned | PROJ-3, PROJ-4, PROJ-5 |

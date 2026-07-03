@@ -10,6 +10,8 @@ Routen:
   /tall          ~25.000 px hohe Seite  -> Höhenkappung
   /cookie        Seite mit OneTrust-artigem Banner  -> Cookie-Dismiss
   /spa           leere SPA-Hülle (kein sichtbarer Text)  -> content_suspicion
+  /branding      Seite mit bekanntem Design-System (Farben/Fonts/Radius/Logo) -> Branding-Extraktion
+  /brand-logo.png  1x1-PNG (image/png)  -> DOM-Logo-Download
   /redirect      302 -> /normal  -> Redirect-Kette
   /notfound      HTTP 404
   /doc.pdf       Content-Type application/pdf  -> "Kein HTML-Dokument"
@@ -52,6 +54,41 @@ COOKIE_BODY = (
 
 SPA_BODY = '<div id="root"></div><script>/* rendert nichts */</script>'
 
+# Bekanntes Design-System: primary #1d4ed8, accent #f59e0b, surface #ffffff,
+# text #111827, Display-Font Georgia, Text-Font Arial, Radius 12px, Box-Shadow,
+# ein AA-Kontrastverstoß (#bbbbbb auf Weiß) und ein DOM-Logo.
+BRANDING_EXTRA = (
+    '<meta name="description" content="ACME Branding Fixture">'
+    "<style>"
+    "body{background:#ffffff;color:#111827;font-family:Arial,sans-serif;margin:0}"
+    "h1,h2{font-family:Georgia,serif;color:#111827}"
+    ".accent{color:#f59e0b}"
+    ".btn{background:#1d4ed8;color:#ffffff;border-radius:12px;padding:12px 20px;"
+    "box-shadow:0 4px 6px rgba(0,0,0,0.1);border:none;font-size:16px}"
+    ".card{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;"
+    "padding:24px;margin:16px}"
+    ".lowcontrast{color:#bbbbbb;background:#ffffff;font-size:16px}"
+    "</style>"
+)
+BRANDING_BODY = (
+    '<header><a href="/"><img class="logo" src="/brand-logo.png" alt="ACME logo"'
+    ' width="120" height="40"></a></header>'
+    "<main>"
+    "<h1>ACME Willkommen</h1>"
+    '<h2 class="accent">Unsere Leistungen</h2>'
+    "<p>Wir liefern klare, zuverlässige Lösungen für Ihr Unternehmen.</p>"
+    '<div class="card"><p>Ein Karten-Element mit Radius und Schatten.</p>'
+    '<button class="btn">Jetzt starten</button></div>'
+    '<p class="lowcontrast">Schwer lesbarer Hinweistext mit zu geringem Kontrast.</p>'
+    "</main><footer><p>© ACME</p></footer>"
+)
+
+# 1x1-PNG (transparent), image/png.
+import base64
+BRAND_LOGO_PNG = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+)
+
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):  # keine Logzeilen ins Test-Output
@@ -79,6 +116,15 @@ class Handler(BaseHTTPRequestHandler):
             self._html(200, "Seite mit Cookie-Banner", COOKIE_BODY)
         elif p == "/spa":
             self._html(200, "SPA", SPA_BODY)
+        elif p == "/branding":
+            self._html(200, "ACME Branding", BRANDING_BODY, BRANDING_EXTRA)
+        elif p == "/brand-logo.png":
+            self.send_response(200)
+            self.send_header("Content-Type", "image/png")
+            self.send_header("Content-Length", str(len(BRAND_LOGO_PNG)))
+            self.end_headers()
+            if self.command != "HEAD":
+                self.wfile.write(BRAND_LOGO_PNG)
         elif p == "/redirect":
             self.send_response(302)
             self.send_header("Location", "/normal")

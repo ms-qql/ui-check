@@ -1,8 +1,8 @@
 # PROJ-3: Branding-Extraktion
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-07-02
-**Last Updated:** 2026-07-02
+**Last Updated:** 2026-07-03
 
 ## Dependencies
 - Requires: PROJ-1 (Seiten-Erfassung) — für gerendertes CSS/DOM und Copy-Texte (Tonalität)
@@ -64,8 +64,62 @@ branding/
 ### Dependencies
 - `design-extract` oder `dembrandt` (npm, MIT) · `@projectwallace/css-analyzer` (npm, MIT, Fallback)
 
+## Implementation Notes (Backend)
+**Umgesetzt:** 2026-07-03 · **Branch:** dev
+
+### Gelieferte Artefakte
+- `scripts/brand-extract.sh` — CLI `brand-extract.sh <url> [--out <run-dir>] [--timeout] [--brandfetch-key]`.
+- `scripts/lib/brand-extract.js` — deterministischer Token-Extraktor (läuft via
+  `agent-browser eval --stdin` im Seitenkontext).
+- `scripts/tests/brand_extract_test.sh` — Black-Box-QA gegen lokale Fixtures.
+- `scripts/tests/serve_fixtures.py` — neue Routen `/branding` (bekanntes Design-System)
+  + `/brand-logo.png`.
+- `scripts/README.md` — Abschnitt `brand-extract.sh`.
+
+### Output (Run-Ordner-Kontrakt)
+`<run-dir>/branding/`: `tokens.json` (DTCG-orientiert), `tailwind-theme.css`
+(Tailwind-4-`@theme`), `branding.md`, `logo.*`, `branding-meta.json`, `raw-extract.json`.
+
+### Abweichungen vom Tech-Design (bewusst, dokumentiert)
+- **Werkzeug statt OSS-Kaskade:** Die genannten Tools `design-extract`/`dembrandt`/
+  `@projectwallace/css-analyzer` sind auf dem VPS **nicht installiert**. Statt sie
+  einzuführen (junge OSS, variable Robustheit, externe Deps) extrahiert ein eigener,
+  zero-dependency Extraktor über `getComputedStyle`. Reproduzierbar, hermetisch
+  testbar, kein Netz. `tool: "computed-styles"` steht in `branding-meta.json`.
+- **Rollen-Vermutung deterministisch statt LLM:** Als markierte Heuristik im Skript
+  (`role_method: "heuristic"`) statt LLM — reproduzierbar/testbar und in PROJ-5 durch
+  Claude überschreibbar. Der **Tonalitäts**-Teil bleibt LLM: das Skript liefert nur
+  `copy_sample` + markierten Platzhalter; Claude ergänzt die 2–4 Sätze in PROJ-5.
+- **Exit-Codes:** `0` ok · `1` Teilausfall (kein Logo / Seite nicht ladbar / leere
+  Tokens — Pipeline läuft weiter) · `2` interner Fehler (Args/Tools). Spec-Kontrakt
+  „0 = ok, 1 = Teilausfall" bleibt gewahrt; `2` ergänzt für Bedienfehler (analog capture.sh).
+
+### Acceptance Criteria — Status
+- [x] `tokens.json` (DTCG): Farben + Rollenvermutung, Fonts (Display/Text + Fundstellen), Radius, Spacing, Schatten
+- [x] `tailwind-theme.css` (`@theme`, Tailwind 4) aus Tokens generiert
+- [x] Logo: Brandfetch (mit Key) → Inline-SVG → DOM-`<img>`/Icon/OG; Datei + Quelle in `branding/`
+- [x] `branding.md`: Palette, Fonts, WCAG-AA-Kontrastverstöße; Tonalität als LLM-Anteil markiert (Copy-Sample geliefert)
+- [x] Deterministik für Farben/Fonts/Radius (CSS-Analyse); nur Rollenvermutung + Tonalität LLM/heuristik-markiert
+
+### Edge Cases — abgedeckt
+- CSS-in-JS / gehashte Klassen → Analyse auf computed styles (keine Quelldateien).
+- >12 Farben → Clustering (RGB-Distanz < 12), Kern-Palette Top 8, Rest `extended`.
+- Kein Logo → `logo: null` + Vermerk, kein Fehler (Exit 1, Pipeline läuft weiter).
+- Nur Fallback-Font-Stack → generische Familie mit Vermerk in `branding.md`.
+- Dark-/Light-Umschalter → Default-Zustand extrahiert, `dark_mode`-Vermerk.
+
 ## QA Test Results
-_To be added by /abc-qa_
+**Ausgeführt:** 2026-07-03 · `scripts/tests/brand_extract_test.sh` — **43 bestanden, 0 fehlgeschlagen**
+
+- **A Happy Path** (`/branding`): Exit 0; alle Outputs; Rollen (surface/text/primary/accent)
+  korrekt; Palette enthält Kernfarben; Radius/Shadow; Fonts Georgia/Arial mit Fundstellen;
+  ≥1 WCAG-AA-Verstoß (`#bbbbbb`); Tailwind-`@theme` mit `--color-*`/`--font-*`/`--radius-*`;
+  DOM-Logo; Tonalität als LLM-Anteil markiert + `copy_sample`.
+- **B Determinismus:** zweiter Lauf → identische `tokens.json` (ohne Zeitstempel).
+- **C Kein Logo** (`/normal`): Exit 1, `status: partial`, `logo: null`, Tokens trotzdem da.
+- **D Argument-Validierung:** keine URL / unbekannte Option → Exit 2, deutsche Meldung.
+
+> Formales `/abc-qa` (Akzeptanzkriterien-Red-Team) noch offen — Backend-Selbsttest grün.
 
 ## Deployment
 _To be added by /abc-deploy_

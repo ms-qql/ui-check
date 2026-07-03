@@ -124,6 +124,69 @@ ausweisen kann.
   wird dessen `cookie_banner`-Vermerk übernommen; ein nicht geschlossenes Banner
   wird als Consent-Warnung notiert (Messung ggf. verfälscht).
 
+## `brand-extract.sh` — Branding-Extraktion (PROJ-3)
+
+Extrahiert das faktische Design-System der gerenderten Ziel-Seite als
+strukturierte Tokens (Farben mit Rollen-Vermutung, Fonts, Radius, Spacing,
+Schatten) + Tailwind-4-Theme + Logo + Kurzprofil mit WCAG-AA-Kontrastverstößen.
+Basis für das Redesign (Stufe 2) und die Branding-Bibliothek (PROJ-12).
+
+```bash
+scripts/brand-extract.sh <url> [--out <run-dir>] [--timeout 60] [--brandfetch-key <id>]
+```
+
+- `<url>` — Ziel-URL (Protokoll optional, `https://` wird ergänzt).
+- `--out <run-dir>` — Run-Ordner (i. d. R. der von `capture.sh`). Ohne Angabe
+  wird `runs/<datum>-<domain>-NNN` automatisch angelegt.
+- `--timeout` — Ladewartezeit in Sekunden (Default 60).
+- `--brandfetch-key <id>` — optionale Brandfetch-Client-ID (oder Env
+  `BRANDFETCH_CLIENT_ID`) für die Logo-CDN; ohne Key wird der DOM-Fallback genutzt.
+
+### Ausgabe (Run-Ordner-Kontrakt)
+
+```
+<run-dir>/branding/
+├── tokens.json          DTCG-orientierte Tokens (Farben mit Rollen-Vermutung, Fonts,
+│                        Radius, Spacing, Schatten) — deterministisch
+├── tailwind-theme.css   @theme-Variablen (Tailwind 4), aus tokens.json generiert
+├── branding.md          Kurzprofil: Palette, Fonts, WCAG-AA-Kontrast, Tonalität (LLM)
+├── logo.*               Logo + Quellenvermerk (brandfetch | dom | null)
+├── branding-meta.json   Status, Werkzeug, Extraktor-Stats, Logo-Quelle, Vermerke
+└── raw-extract.json     Roh-Extrakt des Browser-Laufs (Beweis/Archiv)
+```
+
+### Exit-Codes
+
+| Code | Bedeutung |
+|---|---|
+| `0` | Vollständig erfolgreich (Tokens **und** Logo) |
+| `1` | Teilausfall: kein Logo / Seite nicht ladbar / leere Tokens — Pipeline läuft degradiert weiter, Outputs stehen trotzdem (`status: "partial"`) |
+| `2` | Interner Fehler (fehlendes Tool, ungültige Argumente) |
+
+### Verhalten & Deterministik-Grenze
+
+- **Computed styles statt OSS-Tool-Kaskade:** Statt der im Tech-Design genannten
+  (nicht installierten) Tools `design-extract`/`dembrandt`/`css-analyzer` läuft die
+  Extraktion über einen eigenen, zero-dependency Extraktor (`lib/brand-extract.js`)
+  auf `getComputedStyle` der gerenderten Seite — robuster und hermetisch testbar.
+- **Deterministisch (reproduzierbar):** Farben (inkl. Clustering naher Nachbarn),
+  Fonts (Display/Text + Fundstellen), Radius, Spacing, Schatten und die
+  WCAG-AA-Kontrastprüfung. Zwei Läufe liefern identische Tokens.
+- **Markierter Heuristik-Anteil:** die Rollen-Vermutung (primary/accent/surface/text)
+  ist eine deterministische Heuristik und in `tokens.json` als
+  `role_method: "heuristic"` gekennzeichnet — in der Orchestrierung (PROJ-5) durch
+  Claude überprüf-/überschreibbar.
+- **LLM-Anteil:** die Tonalität (2–4 Sätze) wird **nicht** vom Skript verfasst,
+  sondern in PROJ-5 aus dem in `raw-extract.json`/`branding.md` gelieferten
+  `copy_sample` von Claude abgeleitet (in `branding.md` als LLM-Anteil markiert).
+- **Logo-Kaskade:** Brandfetch-Logo-CDN (nur mit Client-ID) → Inline-SVG im Header
+  → DOM-`<img>`/Icon/OG-Image (Download). Kein Logo → `logo: null` (kein Fehler).
+- **Cookie-Banner:** gleiche Best-Effort-Kaskade wie `capture.sh`.
+- **Dark-Mode:** ist der Default-Zustand dunkel, wird der dunkle Zustand extrahiert
+  und in `branding.md` + `branding-meta.json` vermerkt.
+- **Farb-Clustering:** RGB-Nachbarn (Distanz < 12) werden zusammengefasst; Kern-Palette
+  = Top 8 nach Häufigkeit, Rest als `extended` (max. 24 gesamt).
+
 ## Voraussetzungen
 
 - **lighthouse** (npm, global) für PROJ-2:

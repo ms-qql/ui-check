@@ -2,7 +2,7 @@
 
 ## Status: Planned
 **Created:** 2026-07-02
-**Last Updated:** 2026-07-02
+**Last Updated:** 2026-07-03
 
 ## Dependencies
 - Requires: PROJ-3 (Branding-Tokens), PROJ-4 (Befunde + Cai-Teilscores als Redesign-Input), PROJ-5 (Orchestrierung, `--prompt`)
@@ -34,7 +34,73 @@ Erzeugt aus Audit + Branding zwei Redesign-Varianten als React/Tailwind/shadcn-C
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /abc-architecture_
+**Erstellt:** 2026-07-03 · **Stack:** Claude-Code-Skill-Pipeline (Claude als Generator) → React/Tailwind/shadcn-Output · **Branch:** dev
+
+### Struktur (Generator-Sandwich, analog PROJ-5)
+Alles Kreative macht Claude, alles Prüfbare ein deterministischer Treiber — dasselbe Muster wie der Judge-Pass in PROJ-5:
+
+```
+1. redesign.sh <run-dir>          INIT: Gate (Stufe-1-Lauf komplett? scores.json + branding/ da?)
+                                  → Scaffold redesign/ anlegen → Kontext bündeln
+                                  (Tokens, Report, Cai-Teilscores, Branding, --prompt aus ui-check.json)
+2. (Claude) Brief-Pass            brief.md — VOR jeder Generierung: Conversion-Ziel, primärer CTA,
+                                  Sektionsplan (aus Original), Brand-Entscheidungen
+                                  (beibehalten/angepasst + Begründung), Anti-Slop-Constraints,
+                                  Abweichungen durch Nutzer-Prompt
+3. (Claude) Struktur → Content    shared/content.json — Sektionsplan + verbesserte deutsche
+                                  Original-Copy (nichts erfinden) + Bild-Slot-Liste
+4. (Claude) Visual-Pass ×2        safe/ + bold/ — React-Komponenten nach Rezept
+                                  (recipes/safe.md bzw. recipes/bold.md) + images.md
+5. redesign.sh --verify <run-dir> GATES: Ordner-/Datei-Struktur, Token-Lint (nur Farben aus
+                                  tailwind-theme.css bzw. im Brief begründete), kein
+                                  Google-Fonts-CDN, keine Lorem-/TODO-Reste,
+                                  images.md deckt alle referenzierten Slots
+```
+
+Die Reihenfolge Struktur → Content → Visuals (Cai-Iterationsmodell) ist damit fest im Ablauf verankert, nicht nur eine Prompt-Bitte.
+
+### Aufbau einer Variante (PM-Sicht)
+```
+redesign/<safe|bold>/
+├── Einstiegskomponente          lädt shared/content.json + Theme
+├── Sektionen laut Sektionsplan  z. B. Hero, Leistungen, Social Proof, CTA, Footer
+├── components/ui/               kopierte shadcn-/Magic-UI-/Aceternity-Komponenten
+└── Hintergrund-Effekte          nur Bold: Paper Shaders/CSS — assetfrei, keine Bild-API
+```
+Beide Varianten teilen Content + Tokens; nur Layout-Rezept und Animations-Level unterscheiden sich.
+
+### Daten (Run-Ordner-Kontrakt)
+```
+<run-dir>/redesign/
+├── brief.md          Redesign-Brief (siehe Brief-Pass) — Pflicht vor Generierung
+├── images.md         je Bild-Slot: Platzhalter-Vermerk + fertiger Bild-Prompt
+├── shared/           content.json (Sektionen + deutsche Copy) · Kopie tokens.json
+│                     + tailwind-theme.css (eingefrorener Stand dieses Laufs)
+├── safe/             buildfähige React-Komponenten (konservatives Facelift)
+└── bold/             buildfähige React-Komponenten (mutige Neuinterpretation)
+
+recipes/  (im Repo, versioniert wie rubrics/)
+├── safe.md           Layout-Rezept + Taste-Vorgaben, Varianz niedrig, Animation dezent
+└── bold.md           Layout-Rezept + Taste-Vorgaben, Varianz hoch, Animation ausgeprägt
+```
+
+### Skill-/CLI-Kontrakt
+- Neuer Skill **`/ui-redesign <run-dir>`** (`.claude/skills/ui-redesign/SKILL.md`) — Stufe 1 bleibt audit-only, `/ui-check` unverändert. Headless aufrufbar (Jupiter, PROJ-14).
+- Treiber `scripts/redesign.sh <run-dir>` (INIT) und `--verify <run-dir>` (Gates) · Exit 0 = ok, 1 = degradiert (z. B. Gate-Warnung), 2 = Abbruch (fehlender Stufe-1-Lauf, rote Pflicht-Gates).
+
+### Tech-Entscheidungen
+- **Generator-Sandwich statt Ein-Skript:** Generierung ist LLM-Arbeit und nicht skriptbar — aber Scaffold, Kontext-Bündelung und alle Gates sind es. Gleiches bewährtes Muster wie PROJ-5 (Judge zwischen Collect/Finalize), gleiche Testbarkeit (hermetische Suite gegen den Treiber).
+- **Framework-agnostisches React statt Next.js:** Die Varianten nutzen bewusst keine Next-spezifischen APIs. Grund: PROJ-7 bündelt per web-artifacts-builder zu einer Datei (kein Next-Server), PROJ-19 deployt später echte Next.js-Sites — client-seitige React/Tailwind-Komponenten bedienen beide Abnehmer. Der PRD-Zielstack bleibt damit erreichbar, ohne PROJ-7 zu blockieren.
+- **Rezepte im Repo statt externer Skills:** Die in der Spec genannten `frontend-design`-/`taste`-Skills sind auf dem VPS **nicht installiert**. Statt einer unversionierten Abhängigkeit werden die Taste-/Varianz-Vorgaben als versionierte Rezept-Dateien `recipes/{safe,bold}.md` ins Repo gelegt (Muster: `rubrics/`); die Anti-Slop-Constraints kommen aus der bestehenden `rubrics/slop.md` und werden je Lauf in `brief.md` dokumentiert (AC erfüllt). Werden die Anthropic-Skills später installiert, ergänzen sie die Rezepte — der Output-Kontrakt bleibt gleich.
+- **Copy-Paste-Vendoring (shadcn-Modell):** Komponenten aus shadcn/Magic UI/Aceternity werden in den Variantenordner kopiert, kein Registry-Fetch zur Buildzeit → offline buildfähig, und die Kopien sind die Rohware für die Komponenten-Registry (PROJ-11).
+- **Ein Content, zwei Layouts:** Beide Varianten lesen dieselbe `content.json`. So vergleichen Vorher/Nachher (PROJ-8) und Nachher-Scoring (PROJ-9) wirklich Layout-Entscheidungen statt Content-Zufall — und der Content-Pass läuft nur einmal (Token-Kosten).
+- **Token-Treue als Gate, nicht als Bitte:** Der Verify-Schritt lintet deterministisch, dass nur extrahierte Farben (bzw. im Brief begründete Anpassungen) vorkommen — Markentreue wird geprüft, nicht erhofft.
+- **Bilder = Platzhalter + Prompt:** keine Bild-API im MVP (0-€-Constraint); `images.md` macht die Slots später automatisierbar.
+- **Buildbarkeit wird in PROJ-7 verifiziert:** Der Verify-Schritt prüft Struktur/Inhalt; der echte Build (Parcel) ist der Publish-Gate-Job von PROJ-7 — keine doppelte Build-Infrastruktur in PROJ-6.
+
+### Dependencies
+- Keine neuen System-Tools (Generator = Claude; Treiber = bash/jq wie gehabt)
+- npm-Abhängigkeiten werden nur **in den generierten Varianten deklariert** (react, motion, optional `@paper-design/shaders-react`, tailwindcss); installiert/gebaut wird erst in PROJ-7
 
 ## QA Test Results
 _To be added by /abc-qa_

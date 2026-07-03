@@ -1,6 +1,6 @@
 # PROJ-4: Design-Scoring & Report
 
-## Status: In Review
+## Status: Approved
 **Created:** 2026-07-02
 **Last Updated:** 2026-07-03
 
@@ -138,8 +138,8 @@ Sehr gute Seite ≥85 (Test E) · fehlender CTA (Test G) · App-Modus-Hinweis (T
 ### Input-Gates / Robustheit (Exit 2)
 Kein `judge.json` · Capture `status≠ok` · Rubrik-Version-Konflikt · kein Run-Ordner (Test H, alle Exit 2). `--weights 0,0,0,0,0` → Division-Guard greift, `total:null`, gültiges JSON (Probe P5). Kaputte `runs.jsonl`-Zeile → kein Crash (Probe P4).
 
-### Gefundene Bugs
-**Keine Critical/High.** 2 Medium (Datenintegrität), 3 Low.
+### Gefundene Bugs — **alle 5 gefixt am 2026-07-03** (verifiziert, Regressionstests Block I + F)
+**Keine Critical/High.** 2 Medium (Datenintegrität) + 3 Low — **alle behoben**.
 
 - **BUG-1 (Medium) — String-Score wird still zu 100 inflationiert.**
   Liefert der Judge einen Score als String (z. B. `"visual":{"score":"72"}` — bei LLM-Output plausibel), ergibt `"72" > 100` in jq `true` → `clamp` liefert **100** (Bestwert) statt 72. Der Fehler ist still (kein Abbruch, `scores.json` gültig) und **verfälscht Gesamtscore + PROJ-9-Deltas nach oben**.
@@ -164,8 +164,17 @@ Kein `judge.json` · Capture `status≠ok` · Rubrik-Version-Konflikt · kein Ru
 ### Regression
 Keine Fremd-Features berührt (reine Neu-Dateien + additive README-/INDEX-Änderungen). PROJ-1/2/3-Skripte unverändert; deren Ausgabekontrakte werden nur gelesen. Offene `scripts/lib/brand-extract.js`-Änderungen (PROJ-3) bewusst nicht angefasst.
 
+### Bugfixes (2026-07-03, im Anschluss an QA)
+- **BUG-1 gefixt:** neue jq-`def num` lässt nur echte Zahlen zu; nicht-numerische Judge-Scores ⇒ *nicht messbar* (renormiert) statt still 100. Regression: Block I.
+- **BUG-2 gefixt:** Benchmark-Filter um `.rubric_version == aktuelle Version` erweitert; `benchmark.rubric_version` steht jetzt im Output. Regression: Block F (Fremd-Rubrik zählt nicht mit).
+- **BUG-3 gefixt:** `def md_safe` strippt Steuerzeichen + `<>[]()` aus der Report-Titelzeile. Regression: Block I.
+- **BUG-4 gefixt:** `def renorm` (Largest-Remainder) — effektive Gewichte summieren jetzt exakt 100. Regression: Block I.
+- **BUG-5 gefixt:** Benchmark liest `runs.jsonl` zeilenweise via `jq -R 'fromjson?'` — eine kaputte Zeile kippt den Benchmark nicht mehr. Regression: Block I.
+- Test-Suite auf **50 Assertions** erweitert (Block I neu, Block F um Rubrik-Version-Filter ergänzt) — alle grün.
+- Root-Cause-Notiz: Der ursprüngliche Testlauf-Fehlschlag nach dem BUG-5-Fix lag an Test-Fixtures, die `jq -n` (mehrzeilig, Pretty-Print) statt `jq -c -n` (JSONL) nutzten — nicht am Skript. Das Skript hängt Läufe stets kompakt an; Fixtures nachgezogen.
+
 ### Production-Ready-Bewertung
-**BEDINGT READY.** Keine Critical/High-Bugs → nach Workflow-Rubrik deploybar. **Empfehlung QA:** BUG-1 und BUG-2 vor `/abc-deploy` fixen — beide betreffen Datenintegrität und speisen nachgelagerte Features (PROJ-9-Deltas, PROJ-10-Benchmarks). BUG-3–5 können als Backlog folgen.
+**READY.** Keine offenen Critical/High/Medium-Bugs mehr; alle 7 AC bestanden, alle 5 QA-Bugs behoben und per Regressionstest abgesichert (50/50 grün). Freigabe für `/abc-deploy`.
 
 ## Deployment
 _To be added by /abc-deploy_

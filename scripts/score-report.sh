@@ -110,13 +110,18 @@ URL_HASH="$(printf '%s' "$FINAL_URL" | sha256sum 2>/dev/null | cut -c1-16)"
 RUNS="$ROOT/data/runs.jsonl"
 BENCH="null"
 if [[ -s "$RUNS" ]]; then
-  BENCH="$(jq -s -c \
-      --arg tag "$INDUSTRY" '
-      map(select(.industry_tag == $tag and (.total|type=="number")))
+  # BUG-5: zeilenweise robust parsen (fromjson?) — eine kaputte Zeile darf den
+  #        Benchmark nicht kippen. BUG-2: nur gleiche rubric_version vergleichen
+  #        (sonst mischt der Durchschnitt inkompatible Rubrik-Generationen).
+  BENCH="$(jq -R 'fromjson?' "$RUNS" 2>/dev/null | jq -s -c \
+      --arg tag "$INDUSTRY" --arg rv "$RUBRIC_VERSION" '
+      map(select(.industry_tag == $tag
+                 and .rubric_version == $rv
+                 and (.total|type=="number")))
       | if length >= 10
-        then { industry_tag: $tag, n: length,
+        then { industry_tag: $tag, rubric_version: $rv, n: length,
                average_total: ((map(.total)|add / length)|round) }
-        else null end' "$RUNS" 2>/dev/null)"
+        else null end' 2>/dev/null)"
   [[ -z "$BENCH" ]] && BENCH="null"
 fi
 
@@ -140,25 +145,43 @@ jq -n \
   --argjson bench "$BENCH" '
   def clamp: if . < 0 then 0 elif . > 100 then 100 else . end;
   def rnd: (.*1|round);
+  # BUG-1: nur echte Zahlen zulassen — String/anderer Typ ⇒ null (nicht messbar),
+  # statt in jq still zu 100 zu clampen ("72" > 100 ist in jq true).
+  def num: if type == "number" then . else null end;
+  # BUG-4: ganzzahlige Prozentgewichte, die exakt auf 100 summieren
+  # (Largest-Remainder / Hare-Quote statt unabhängigem Runden).
+  def renorm($keys; $w; $wsum):
+    if ($keys|length) == 0 or $wsum == 0 then {}
+    else
+      ([ $keys[] | { k: ., f: ($w[.] / $wsum * 100) } ]) as $raw
+      | ([ $raw[] | (.f|floor) ] | add) as $flsum
+      | (100 - $flsum) as $rem
+      | ($raw | to_entries
+          | sort_by(-(.value.f - (.value.f|floor)))) as $sorted
+      | reduce range(0; ($raw|length)) as $i ({};
+          .[$sorted[$i].value.k] =
+            (($sorted[$i].value.f|floor) + (if $i < $rem then 1 else 0 end)))
+    end;
 
   ($judge[0])            as $j |
   ($lh[0])              as $L |
   ($brm[0])             as $B |
   ($brr[0])             as $R |
 
-  # ── Dimensionen ──
-  ($j.visual.score | if .==null then null else (.|clamp|rnd) end)      as $vis |
-  ($j.ki_score     | if .==null then null else ((10 - .) * 10 | clamp | rnd) end) as $slop |
+  # ── Dimensionen ── (alle Judge-Eingänge über num: Nicht-Zahl ⇒ nicht messbar)
+  ($j.visual.score | num | if .==null then null else (clamp|rnd) end)  as $vis |
+  ($j.ki_score | num | if .==null then null else ((10 - .) * 10 | clamp | rnd) end) as $slop |
 
-  (if $L == null then null else ($L.scores.performance) end)          as $perf |
+  ($L.scores.performance | num)                                       as $perf |
 
-  ((($B.counts.contrast_violations) // 0))                            as $viol |
-  (if $L == null or $L.scores.accessibility == null then null
-   else (($L.scores.accessibility) - ([($viol * 4), 40] | min) | clamp | rnd) end) as $a11y |
+  ((($B.counts.contrast_violations | num) // 0))                      as $viol |
+  (($L.scores.accessibility | num) as $lha
+   | if $lha == null then null
+     else ($lha - ([($viol * 4), 40] | min) | clamp | rnd) end)       as $a11y |
 
   ($j.conversion) as $cv |
   ([$cv.clarity, $cv.credibility, $cv.logic, $cv.action, $cv.emotion]
-     | map(select(. != null))) as $cvals |
+     | map(num) | map(select(. != null))) as $cvals |
   (if ($cvals|length) == 0 then null else (($cvals|add) / ($cvals|length) | clamp | rnd) end) as $conv |
 
   # ── Gewichte + Renormierung ──
@@ -166,8 +189,7 @@ jq -n \
   { visuell:$vis, slop:$slop, performance:$perf, accessibility:$a11y, conversion:$conv } as $dim |
   ([ $dim | to_entries[] | select(.value != null) | .key ]) as $measurable |
   ([ $measurable[] | $w[.] ] | add) as $wsum |
-  ( if $wsum == null or $wsum == 0 then {} else
-      ($measurable | map({ (.): (($w[.] / $wsum) * 100 | rnd) }) | add) end ) as $weff |
+  ( renorm($measurable; $w; ($wsum // 0)) ) as $weff |
   ( if $wsum == null or $wsum == 0 then null
     else ([ $measurable[] | $dim[.] * $w[.] ] | add) / $wsum | rnd end ) as $total |
 
@@ -252,9 +274,12 @@ jq -r '
   def band($s): if $s==null then "—" elif $s>=85 then "🟢" elif $s>=60 then "🟡" else "🔴" end;
   def dim($k; $label; $d):
     "| \($label) | \(if $d.score==null then "_nicht messbar_" else "\(band($d.score)) \($d.score)" end) | \($d.source) |";
+  # BUG-3: von der Zielseite kontrollierte URL neutralisieren, bevor sie roh in
+  # Markdown/HTML (PROJ-7/16) landet — Steuerzeichen und <>[]`() strippen.
+  def md_safe: (. // "") | tostring | gsub("[\\n\\r\\t<>\\[\\]`()]"; "") | gsub("  +"; " ");
   . as $r |
   [
-    "# UI-Check Report — \($r.final_url // $r.url)",
+    "# UI-Check Report — \($r.final_url // $r.url | md_safe)",
     "",
     "**Lauf-ID:** `\($r.run_id)` · **Datum:** \($r.timestamp) · **Rubrik:** `\($r.rubric_version)` · **Generator:** `\($r.generator_version)`",
     "",

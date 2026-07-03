@@ -139,19 +139,27 @@ bash "$SR" "$R" --industry saas >"$WORK/e.out" 2>&1
 assert_eq "$(sj "$R" '.findings_meta.minimum')" "3" "Befund-Minimum == 3 bei ≥85"
 
 # ── F: Benchmark erst ab n ≥ 10 gleicher Industrie-Tag ─────────────────────
-echo; echo "▶ F: Benchmark-Gate (n≥10)"
+echo; echo "▶ F: Benchmark-Gate (n≥10, gleiche Rubrik-Version)"
 : > "$RUNS"
+# 5 Zeilen unter FREMDER Rubrik-Version — dürfen NICHT mitzählen (BUG-2).
+for i in $(seq 1 5); do
+  jq -c -n --arg t "$i" '{date:"2026-07-01",url_hash:("f"+$t),industry_tag:"finanz",
+    rubric_version:"1999.00-0",run_id:("f"+$t),total:10,dimensions:{}}' >> "$RUNS"
+done
+# 9 Zeilen unter AKTUELLER Rubrik-Version.
 for i in $(seq 1 9); do
-  jq -n --arg t "$i" '{date:"2026-07-01",url_hash:("h"+$t),industry_tag:"finanz",
-    rubric_version:"x",run_id:("r"+$t),total:(60+($t|tonumber)),dimensions:{}}' >> "$RUNS"
+  jq -c -n --arg t "$i" --arg rv "$RV" '{date:"2026-07-01",url_hash:("h"+$t),industry_tag:"finanz",
+    rubric_version:$rv,run_id:("r"+$t),total:(60+($t|tonumber)),dimensions:{}}' >> "$RUNS"
 done
 R="$WORK/f9"; mk_capture "$R" ok ""; mk_judge "$R"; mk_lh_ok "$R"; mk_branding "$R"
 bash "$SR" "$R" --industry finanz >/dev/null 2>&1
-assert_eq "$(sj "$R" '.benchmark')" "null" "Benchmark ausgeblendet bei n=9"
-# jetzt liegt der 10. Lauf vor → nächster Lauf zeigt Benchmark
+assert_eq "$(sj "$R" '.benchmark')" "null" "Benchmark ausgeblendet bei n=9 (Fremd-Rubrik ignoriert)"
+# jetzt liegt der 10. Lauf gleicher Rubrik vor → nächster Lauf zeigt Benchmark
 R="$WORK/f10"; mk_capture "$R" ok ""; mk_judge "$R"; mk_lh_ok "$R"; mk_branding "$R"
 bash "$SR" "$R" --industry finanz >/dev/null 2>&1
 [[ "$(sj "$R" '.benchmark')" != "null" ]] && ok "Benchmark erscheint ab n≥10" || bad "Benchmark fehlt trotz n≥10"
+assert_eq "$(sj "$R" '.benchmark.rubric_version')" "$RV" "Benchmark nur über gleiche Rubrik-Version"
+assert_eq "$(sj "$R" '.benchmark.n')" "10" "Benchmark n=10 (Fremd-Rubrik nicht mitgezählt)"
 grep -qi "Benchmark" "$R/report.md" && ok "report.md zeigt Benchmark-Zeile" || bad "Benchmark-Zeile fehlt im Report"
 # runs.jsonl append-only, nur URL-Hash (keine Klardaten)
 tail -1 "$RUNS" | grep -q '"url_hash"' && ok "runs.jsonl: url_hash (keine Klardaten)" || bad "runs.jsonl url_hash fehlt"
@@ -180,6 +188,35 @@ jq -n '{rubric_version:"1999.01-0",visual:{score:50},ki_score:5,conversion:{clar
 bash "$SR" "$R" >"$WORK/h3.out" 2>&1; assert_eq "$?" "2" "Rubrik-Version-Konflikt → Exit 2"
 grep -qi "Rubrik-Version-Konflikt" "$WORK/h3.out" && ok "Meldung 'Rubrik-Version-Konflikt'" || bad "Rubrik-Konflikt-Meldung fehlt"
 bash "$SR" >"$WORK/h4.out" 2>&1; assert_eq "$?" "2" "kein Run-Ordner → Exit 2"
+
+# ── I: Bugfix-Regression (QA 2026-07-03) ───────────────────────────────────
+echo; echo "▶ I: Bugfix-Regression"
+: > "$RUNS"
+# BUG-1: nicht-numerischer Score ⇒ nicht messbar (NICHT still 100).
+R="$WORK/i1"; mk_capture "$R" ok ""
+jq -n --arg rv "$RV" '{rubric_version:$rv,visual:{score:"72"},ki_score:3,
+  conversion:{clarity:80,credibility:70,logic:65,action:55,emotion:60}}' > "$R/judge.json"
+bash "$SR" "$R" --industry x >/dev/null 2>&1
+assert_eq "$(sj "$R" '.dimensions.visuell.score')" "null" "BUG-1: String-Score ⇒ null (nicht 100)"
+assert_eq "$(sj "$R" '.dimensions.visuell.measurable')" "false" "BUG-1: String-Score ⇒ nicht messbar"
+# BUG-3: URL-Sonderzeichen werden im Report-Titel neutralisiert.
+R="$WORK/i3"; mkdir -p "$R"
+jq -n '{url:"x",final_url:"https://ex.test/](javascript:alert(1)) <script>x</script>",status:"ok",content_suspicion:null}' > "$R/meta.json"
+mk_judge "$R"; mk_lh_ok "$R"
+bash "$SR" "$R" --industry x >/dev/null 2>&1
+head -1 "$R/report.md" | grep -q '[<>()]' && bad "BUG-3: Sonderzeichen im Titel geblieben" || ok "BUG-3: URL im Titel neutralisiert"
+# BUG-4: renormierte Gewichte summieren exakt 100 (nur visuell+slop+conversion messbar).
+R="$WORK/i4"; mk_capture "$R" ok ""; mk_judge "$R"   # kein Lighthouse ⇒ perf/a11y weg
+bash "$SR" "$R" --industry x >/dev/null 2>&1
+assert_eq "$(sj "$R" '(.weights_effective | add)')" "100" "BUG-4: eff. Gewichte summieren exakt 100"
+# BUG-5: eine kaputte runs.jsonl-Zeile kippt den Benchmark nicht.
+: > "$RUNS"; printf 'DAS_IST_KEIN_JSON\n' >> "$RUNS"
+for i in $(seq 1 10); do
+  jq -c -n --arg t "$i" --arg rv "$RV" '{industry_tag:"kbroken",rubric_version:$rv,total:(60+($t|tonumber))}' >> "$RUNS"
+done
+R="$WORK/i5"; mk_capture "$R" ok ""; mk_judge "$R"; mk_lh_ok "$R"; mk_branding "$R"
+bash "$SR" "$R" --industry kbroken >/dev/null 2>&1
+assert_eq "$(sj "$R" '.benchmark.n')" "10" "BUG-5: kaputte Zeile ignoriert, 10 valide gezählt"
 
 # ── Zusammenfassung ────────────────────────────────────────────────────────
 echo; echo "──────────────────────────────────────────"

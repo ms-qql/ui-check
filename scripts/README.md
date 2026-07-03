@@ -415,10 +415,63 @@ scripts/redesign.sh --verify <run-dir>
   eingefroren; Konflikt ⇒ Gate rot (analog Rubrik-Gate in PROJ-4).
 - **status.json:** führt `phases.redesign` (`awaiting_generation` →
   `ok|degraded|failed`) für Jupiter (PROJ-14) fort.
-- **Buildbarkeit** prüft bewusst erst PROJ-7 (web-artifacts-builder) — hier
+- **Buildbarkeit** prüft bewusst erst PROJ-7 (Mockup-Export-Build) — hier
   nur statisch prüfbare Kontrakte.
 - **Testbarkeit:** `scripts/tests/redesign_test.sh` — hermetische Suite
   (46 Assertions) mit Fixture-Läufen, ohne Browser/Netz/Claude.
+
+## `mockup-export.sh` — Self-contained Mockup-HTML (PROJ-7, Stufe 2)
+
+Deterministischer Export-Treiber nach PROJ-6. Er bündelt die beiden React-Varianten
+(`redesign/safe/`, `redesign/bold/`) zu einer teilbaren `mockup.html`, rendert beide
+Varianten vor und stoppt bei roten Publish-Gates.
+
+```bash
+scripts/mockup-export.sh <run-dir> [--force]
+```
+
+- `<run-dir>` — Run mit vollständigem PROJ-6-Output und grünem
+  `redesign/verify.json`.
+- `--force` — bestehende `<run-dir>/mockup.html` überschreiben.
+
+### Ausgabe (Run-Ordner-Kontrakt)
+
+```
+<run-dir>/mockup.html
+<run-dir>/mockup/
+├── gates.json          Publish-Gates mit Status und Beleg
+├── build.log           npm-/Build-Harness-Output
+└── build-report.json   Größen- und Asset-Treiber für Diagnose
+```
+
+### Publish-Gates
+
+| Gate | Prüfung | Verstoß |
+|---|---|---|
+| M1 | Title gesetzt | rot, Exit 2 |
+| M2 | Meta-Description gesetzt | rot, Exit 2 |
+| M3 | Favicon inline | rot, Exit 2 |
+| M4 | kein Google-Fonts-CDN | rot, Exit 2 |
+| M5 | keine externen Ressourcen außer Bunny Fonts | rot, Exit 2 |
+| M6 | keine Lorem-/TODO-/FIXME-Reste | rot, Exit 2 |
+| M7 | No-JS-Baseline: beide Varianten vorgerendert, CTA sichtbar | rot, Exit 2 |
+| M8 | interne Anker haben Ziele | rot, Exit 2 |
+| M9 | Dateigröße < 5 MB | gelb, Exit 1, Promote trotzdem |
+| M10 | kein horizontales Scrollen bei 375 px | rot, Exit 2 |
+| M11 | interaktive Ansicht mountet beide Varianten | gelb, Exit 1 |
+
+### Verhalten
+
+- **Build-Harness:** `scripts/lib/mockup-shell/` nutzt `esbuild`, `react-dom/server`
+  und Tailwind CLI. Abhängigkeiten werden im Workspace gemerged und unter
+  `~/.cache/ui-check/mockup-deps-*` gecacht; `node_modules` bleibt aus dem Repo.
+- **No-JS-Baseline:** Safe und Bold stehen statisch im HTML. JavaScript blendet im
+  Normalfall nur auf Tab-Modus um und mountet die interaktive React-Ansicht.
+- **status.json:** führt `phases.mockup` (`ok|degraded|failed`) für Jupiter (PROJ-14)
+  fort, falls die Datei im Run existiert.
+- **Testbarkeit:** `scripts/tests/mockup_export_test.sh` — hermetische Suite mit
+  Build- und Browser-Stubs; `MOCKUP_EXPORT_E2E=1` schaltet den echten npm/Browser-Build
+  gegen Fixture-Varianten dazu.
 
 ## Voraussetzungen
 

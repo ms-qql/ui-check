@@ -1,0 +1,65 @@
+/* Shell-Chrome des Mockup-Exports (PROJ-7). Bewusst neutral gehalten und mit
+ * `shell-`-Präfix von den Varianten-Styles (Tailwind-Tokens) getrennt, damit
+ * das Chrome nie mit der Marke des Kunden konkurriert. */
+
+.shell-header {
+  position: sticky;
+  top: 0;
+  z-index: 9999;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  background: #16181d;
+  color: #f4f4f5;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.875rem;
+  border-bottom: 1px solid #2c2f36;
+}
+.shell-brand { display: flex; align-items: baseline; gap: 0.5rem; min-width: 0; }
+.shell-brand strong { font-weight: 600; letter-spacing: 0.01em; }
+.shell-domain { color: #a1a1aa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shell-tabs { display: flex; gap: 0.375rem; }
+.shell-tab {
+  appearance: none;
+  border: 1px solid #3f434b;
+  background: transparent;
+  color: #d4d4d8;
+  border-radius: 999px;
+  padding: 0.3rem 0.85rem;
+  font: inherit;
+  cursor: pointer;
+}
+.shell-tab:hover { border-color: #6b7280; }
+.shell-tab[aria-pressed="true"] { background: #f4f4f5; color: #16181d; border-color: #f4f4f5; font-weight: 600; }
+.shell-tab:focus-visible { outline: 2px solid #93c5fd; outline-offset: 2px; }
+
+.shell-main { min-height: 60vh; }
+.shell-variant-mount { min-height: 40vh; }
+
+.shell-variant-label {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  background: #e4e4e7;
+  color: #18181b;
+  font: 600 0.875rem/1.4 ui-sans-serif, system-ui, sans-serif;
+}
+
+.shell-footer {
+  padding: 0.75rem 1rem;
+  background: #16181d;
+  color: #a1a1aa;
+  font: 400 0.75rem/1.5 ui-sans-serif, system-ui, sans-serif;
+  text-align: center;
+}
+
+/* Mit JS: Tab-Modus — nur die aktive Variante ist sichtbar, Labels weg. */
+html.js body[data-active-variant="safe"] .shell-variant[data-variant="bold"],
+html.js body[data-active-variant="bold"] .shell-variant[data-variant="safe"] { display: none; }
+html.js .shell-variant-label { display: none; }
+
+/* Ohne JS: beide Varianten gestapelt mit Label, Umschalter versteckt
+ * (Baseline: Inhalte sichtbar, nur Interaktionen degradieren). */
+html.no-js .shell-tabs { display: none; }

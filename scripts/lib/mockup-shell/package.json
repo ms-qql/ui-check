@@ -1,0 +1,12 @@
+{
+  "name": "ui-check-mockup-shell",
+  "private": true,
+  "description": "Build-Toolchain des Mockup-Exports (PROJ-7) — Pins gewinnen beim Merge mit den Varianten-Dependencies.",
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "esbuild": "^0.25.5",
+    "tailwindcss": "^4.1.11",
+    "@tailwindcss/cli": "^4.1.11"
+  }
+}

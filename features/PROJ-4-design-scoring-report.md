@@ -1,8 +1,8 @@
 # PROJ-4: Design-Scoring & Report
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-07-02
-**Last Updated:** 2026-07-02
+**Last Updated:** 2026-07-03
 
 ## Dependencies
 - Requires: PROJ-1 (Screenshots + Snapshot), PROJ-2 (Lighthouse-Kennzahlen), PROJ-3 (Kontrast-Verstöße, Branding-Kontext)
@@ -72,6 +72,50 @@ data/runs.jsonl  (append-only)           Datum · URL-Hash · Industrie-Tag · S
 
 ### Dependencies
 - keine neuen — der Judge ist Claude selbst; Rendern via Stdlib
+
+## Implementation Notes (Backend)
+**Umgesetzt:** 2026-07-03 · **Branch:** `dev`
+
+### Gelieferte Artefakte
+- `scripts/score-report.sh` — deterministische Scoring-/Report-Engine (jq/bash, **kein**
+  Browser/Lighthouse nötig). Bewertet nicht selbst — mergt & rendert reproduzierbar.
+- `rubrics/` — versionierte Judge-Rubriken (`visual.md`, `slop.md`, `conversion.md`) mit
+  Anker-Beispielen je 20er-Band + `VERSION` (`2026.07-1`) + `README.md`.
+- `data/runs.jsonl` (+ `data/README.md`) — append-only Benchmark-Korpus, nur URL-Hashes.
+- `scripts/tests/score_report_test.sh` — 43 hermetische Assertions (A–H), alle grün.
+- `scripts/README.md` — `score-report.sh`-Abschnitt inkl. **Judge-Ausgabe-Kontrakt** (`judge.json`).
+
+### Architektur-Split (wichtig für PROJ-5)
+Der Judge ist **Claude** in frischem Kontext (Bias-Schutz). PROJ-5 fährt die drei
+Judge-Pässe gegen `rubrics/` und schreibt **`<run-dir>/judge.json`** (Schema in
+`scripts/README.md`). `score-report.sh` konsumiert diese Datei + `lh-summary.json`
+(PROJ-2) + `branding-meta.json`/`raw-extract.json` (PROJ-3) + `meta.json` (PROJ-1).
+
+### Mapping der Dimensionen
+- `visuell` = `judge.visual.score` · `slop` = `(10 − ki_score)·10` · `conversion` = Mittel der 5 Cai-Teilscores.
+- `performance` = Lighthouse-Performance · `accessibility` = Lighthouse-A11y − `min(4·Kontrastverstöße, 40)`.
+- Fehlende Lighthouse-Dimensionen → *nicht messbar* → aus Gewichtung entfernt + **renormiert**.
+
+### Umgesetzte AC
+- [x] `scores.json`: 5 Dimensionen + Cai-Teilscores + Gesamtscore + Gewichte (roh + effektiv) + Rubrik-Version.
+- [x] `report.md` (deutsch): Score-Panel, Befunde nach Severity (Beleg + Fundort + Quelle), Kurzempfehlungen, Meta.
+- [x] Quelle je Dimension; ausgefallene Messungen als *nicht messbar* + Renormierung.
+- [x] Versionierte Rubrik-Dateien mit Anker-Beispielen je 20er-Band; Rubrik-Version im Report + erzwungener Abgleich.
+- [x] Reproduzierbarkeit: rein deterministisch (identischer Input ⇒ identischer Score); Test D belegt Δ = 0.
+- [x] 5–15 Befunde (Min 3 bei ≥ 85); unbelegte Befunde werden verworfen (Test B).
+- [x] Benchmark-Zeile ab n ≥ 10 gleicher `industry_tag` in `runs.jsonl` (Test F), sonst ausgeblendet.
+- [x] Edge Cases: sehr gute Seiten (Min 3), fehlender CTA, App-Modus-Hinweis, SPA-Verdacht, Judge↔Lighthouse-Widerspruch (kein Glätten).
+
+### Bewusste Entscheidungen / Abweichungen
+- **`ki_score` (roh 0–10)** kommt vom Judge; die Invertierung zur Slop-Dimension macht das
+  Skript — weniger Transformation beim Judge = reproduzierbarer.
+- **Boolean-Defaults ohne jq-`//`** (jq behandelt `false` wie null) — explizit via `if == null`.
+- **jq-`//`-Fallstrick** dokumentiert; Tests decken `cta_present:false` explizit ab.
+
+### Test ausführen
+```bash
+scripts/tests/score_report_test.sh    # 43 Assertions, hermetisch (nur jq)
+```
 
 ## QA Test Results
 _To be added by /abc-qa_

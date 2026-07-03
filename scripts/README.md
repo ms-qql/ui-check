@@ -187,8 +187,92 @@ scripts/brand-extract.sh <url> [--out <run-dir>] [--timeout 60] [--brandfetch-ke
 - **Farb-Clustering:** RGB-Nachbarn (Distanz < 12) werden zusammengefasst; Kern-Palette
   = Top 8 nach Häufigkeit, Rest als `extended` (max. 24 gesamt).
 
+## `score-report.sh` — Design-Scoring & Report (PROJ-4)
+
+Mergt die **Claude-Judge-Ausgabe** (`judge.json`) mit den Lighthouse- (PROJ-2) und
+Branding-Dimensionen (PROJ-3) zum zentralen Stufe-1-Deliverable: `scores.json`
+(maschinenlesbar) + `report.md` (deutsch, kundentauglich). Das Skript **bewertet
+nicht** — es rechnet & rendert rein deterministisch (jq/bash), damit reproduzierbar.
+Der Judge ist Claude selbst; die Orchestrierung (PROJ-5) erzeugt `judge.json` anhand
+der versionierten Rubriken in `rubrics/`.
+
+```bash
+scripts/score-report.sh <run-dir> [--judge <file>] [--industry <tag>] [--weights v,s,p,a,c]
+```
+
+- `<run-dir>` — Run-Ordner aus PROJ-1 (mit `meta.json`, `status: "ok"`). **Pflicht.**
+- `--judge <file>` — Judge-Ausgabe (Default `<run-dir>/judge.json`).
+- `--industry <tag>` — Industrie-Tag für Benchmark/`data/runs.jsonl` (Default `unknown`).
+- `--weights v,s,p,a,c` — Gewichte visuell,slop,performance,a11y,conversion
+  (Default `25,15,15,15,30`). Nicht messbare Dimensionen werden **renormiert**.
+
+### Judge-Ausgabe-Kontrakt (`<run-dir>/judge.json`)
+
+Von PROJ-5 aus drei Judge-Pässen gegen `rubrics/` erzeugt:
+
+```jsonc
+{
+  "rubric_version": "2026.07-1",     // MUSS zu rubrics/VERSION passen (sonst Abbruch)
+  "language_confident": true,        // Copy-Befunde nur bei sicherer Sprache
+  "app_mode": false,                 // App/Tool statt Landing? → Report-Hinweis
+  "cta_present": true,               // kein CTA → Action/Logic auf Info-Aufgabe bezogen
+  "visual":     { "score": 72, "findings": [ … ] },              // 0–100 (rubrics/visual.md)
+  "ki_score":   3,                                               // 0–10 design-ai-check (rubrics/slop.md)
+  "slop":       { "findings": [ … ] },                           // optional; Score kommt aus ki_score
+  "conversion": { "clarity": 80, "credibility": 70, "logic": 65, // je 0–100 (rubrics/conversion.md)
+                  "action": 55, "emotion": 60, "findings": [ … ] }
+}
+```
+
+Jeder **Befund** (`findings[]`): `{ title, severity: hoch|mittel|niedrig, evidence, location, source }`.
+`score-report.sh` ergänzt Befunde aus Lighthouse-Opportunities (`source: lighthouse`) und
+Kontrast-Verstößen (`source: contrast`) und **verwirft unbelegte** Befunde (Beleg + Fundort Pflicht).
+
+### Dimensionen & Gesamtscore
+
+| Dimension | Herkunft |
+|---|---|
+| `visuell` | `judge.visual.score` |
+| `slop` | `(10 − judge.ki_score) · 10` (invertiert: 0 Slop = 100) |
+| `performance` | `lh-summary.scores.performance` (fehlt/failed → *nicht messbar*) |
+| `accessibility` | `lh a11y − min(4·Kontrastverstöße, 40)` (fehlt → *nicht messbar*) |
+| `conversion` | Mittel der fünf Cai-Teilscores |
+
+Gesamtscore = gewichtetes Mittel; **nicht messbare** Dimensionen fallen aus der
+Gewichtung und werden **renormiert** (kein Null-Strafe-Effekt).
+
+### Ausgabe (Run-Ordner-Kontrakt)
+
+```
+<run-dir>/scores.json    Dimensionen · Cai-Teilscores · Gewichte (+ renormiert) ·
+                         Gesamtscore · Befunde · Benchmark · Rubrik-Version
+<run-dir>/report.md      Score-Panel · Befunde nach Severity · Kurzempfehlungen ·
+                         Benchmark-Zeile · Meta (URL, Datum, Lauf-ID, Rubrik)
+data/runs.jsonl          + 1 Zeile (append-only, nur URL-Hash — s. data/README.md)
+```
+
+### Exit-Codes
+
+| Code | Bedeutung |
+|---|---|
+| `0` | Report erzeugt, alle 5 Dimensionen messbar |
+| `1` | Report erzeugt, aber **degradiert** (≥ 1 Dimension nicht messbar ODER Befund-Minimum unterschritten) — Pipeline läuft weiter |
+| `2` | Input-Gate/intern: kein Capture (`status ≠ ok`), fehlendes/ungültiges `judge.json`, Rubrik-Version-Konflikt, ungültige Argumente |
+
+### Verhalten
+
+- **Reproduzierbarkeit:** rein deterministisch — identischer Input ⇒ identischer Score
+  (Judge-Streuung via Rubrik-Anker gedämpft; AC-Ziel ±5). Rubrik-Version wird erzwungen.
+- **Befund-Menge:** 5–15 Befunde; bei Gesamtscore ≥ 85 sinkt das Minimum auf 3.
+- **Benchmark:** erscheint erst ab n ≥ 10 Läufen gleichen `industry_tag` in `runs.jsonl`.
+- **Kein Glätten:** Widersprüche Judge ↔ Lighthouse (schön, aber langsam) bleiben getrennt
+  mit Quelle stehen.
+- **Rubriken** liegen versioniert in `rubrics/` (`visual.md`, `slop.md`, `conversion.md`,
+  `VERSION`); jede Änderung = neue Version (Benchmark-Vergleichbarkeit).
+
 ## Voraussetzungen
 
+- **jq** genügt für `score-report.sh` (PROJ-4) — kein Browser/Lighthouse nötig.
 - **lighthouse** (npm, global) für PROJ-2:
   ```bash
   npm install -g lighthouse

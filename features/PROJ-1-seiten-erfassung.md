@@ -113,7 +113,52 @@ Meldungen deutsch auf stdout; maschinenlesbares Ergebnis in meta.json
 Offen für `/abc-qa`: Bot-geschützte Seite (Cloudflare-Challenge) live gegenprüfen; Interstitial/Alters-Gate-Screenshot; sehr große Seite (> 90 s Laufzeitgrenze) unter Last.
 
 ## QA Test Results
-_To be added by /abc-qa_
+**Getestet:** 2026-07-03 · **Branch:** dev · **Methode:** Black-Box gegen `capture.sh` mit deterministischen lokalen Fixtures (kein Internet, keine Flakiness).
+**Test-Suite:** `scripts/tests/capture_test.sh` (+ `scripts/tests/serve_fixtures.py`) — **45/45 Assertions bestanden**.
+
+Ausführen: `bash scripts/tests/capture_test.sh` (startet Fixture-Server automatisch, ~90 s Laufzeit).
+
+### Acceptance Criteria
+
+| # | Kriterium | Ergebnis | Nachweis |
+|---|---|---|---|
+| 1 | `capture <url> --out <dir>` erzeugt shot-375/768/1440.png, snapshot.txt, dom-meta.json | ✅ Pass | Gruppe A: alle Dateien vorhanden + korrekte Bildbreiten (375/768/1440); dom-meta enthält Title, Meta-Description, absolut aufgelösten Favicon, OG-Tags, Sektionen-Anzahl |
+| 2 | `meta.json` enthält URL, finale URL, Timestamp, Dauer, HTTP-Status, agent-browser-Version | ✅ Pass | Gruppe A: alle Pflichtfelder gesetzt + Typen geprüft (ISO-Timestamp, numerische Dauer, http_status 200) |
+| 3 | Lazy-Loading durch Scroll-Durchlauf vor Screenshot | ✅ Pass | Async-Scroll-Durchlauf global + je Viewport; volle Seitenhöhe wird erfasst (/tall 26.042 px gemessen) |
+| 4 | Cookie-Banner Best-Effort weggeklickt, Erfolg/Misserfolg in meta.json | ✅ Pass | Gruppe D: `/cookie` → `cookie_banner.dismissed=true`, `method="selector:#onetrust-accept-btn-handler"` |
+| 5 | Nicht erreichbar (DNS, Timeout, HTTP ≥ 400) → Exit ≠ 0 + deutsche Meldung | ✅ Pass | Gruppe F: HTTP 404 → Exit 2 „nicht erreichbar: HTTP 404"; DNS-Fehler → Exit 2 „nicht erreichbar"; aborted-meta geschrieben |
+| 6 | Bot-Schutz erkannt → sauberer Abbruch, kein Umgehungsversuch | ✅ Pass | Gruppe F: `/botwall` (403 + cloudflare + cf-mitigated + „Just a moment") → Exit 2 „bot-geschützt"; **nicht** fälschlich als HTTP 403 gemeldet (Reihenfolge korrekt) |
+
+### Edge Cases
+
+| Fall | Ergebnis | Nachweis |
+|---|---|---|
+| Redirect-Kette (http→https / Sprach-Redirect) | ✅ Pass | Gruppe B: `/redirect`→`/normal`, `final_url` dokumentiert, `redirects≥1` |
+| Sehr lange Seite > max-height → gekappt + Vermerk | ✅ Pass | Gruppe C: `/tall` → shot-1440 auf 20000 px, `capped=true`, Kappungs-Vermerk in notes. Custom `--max-height 3000` → 1440×3000 verifiziert |
+| Non-HTML (PDF/Bild) → „Kein HTML-Dokument" | ✅ Pass | Gruppe F: `/doc.pdf` (application/pdf) → Exit 2 „Kein HTML-Dokument" |
+| SPA ohne SSR (leerer Body) → `content_suspicion: spa_empty` | ✅ Pass | Gruppe E: `/spa` → Exit 0 + `content_suspicion="spa_empty"` |
+| Argument-Validierung (keine URL / unbekannte Option) | ✅ Pass | Gruppe G: Exit 1 (interner Fehler) |
+| Interstitial / Alters-Gate: nicht umgangen, Screenshot zeigt Gate | ⏳ Nicht live geprüft | Verhalten folgt aus dem Code (kein Bypass), aber ohne echte Gate-Seite nicht visuell verifiziert |
+
+### Red-Team / Robustheit
+
+- **Command-Injection:** URL/`--out`/Content-Type fließen als Argumente bzw. via `jq --arg` — **keine** Shell- oder JSON-Injection. Auto-Run-Ordner wird aus der Domain sanitisiert (`[^a-zA-Z0-9.-]`→`-`), kein Path-Traversal. ✅
+- **Session-Isolation:** eindeutige `AGENT_BROWSER_SESSION` je PID, Browser-Close im EXIT-Trap → parallele Läufe kollidieren nicht. ✅
+- **Secrets:** keine Geheimnisse verarbeitet/geloggt. ✅
+
+### Gefundene Bugs (keine Critical/High)
+
+| ID | Severity | Titel | Beschreibung / Empfehlung |
+|---|---|---|---|
+| QA-1 | Low | Kein harter Laufzeit-Deckel | AC-Ziel „< 90 s" (optional/Technical Requirement) ist nicht garantiert: Summe der Waits (networkidle 25 s + Scrollpässe + 3 Screenshots) kann im Worst Case ~90 s überschreiten. **Empfehlung:** aggregierte Deadline bzw. `timeout 120 …`-Wrapper in PROJ-5-Orchestrator. |
+| QA-2 | Low | `--timeout`/`--max-height` nicht validiert | Nicht-numerische Werte führen zu curl-/Arithmetik-Fehler statt klarer deutscher Meldung. **Empfehlung:** numerische Validierung beim Parsen. |
+| QA-3 | Info | SSRF by design | Tool ruft beliebige URLs inkl. intern/localhost auf (Zweck des Tools). Für internes Single-User-Tool akzeptabel — **nicht** als offener Batch-/Netzdienst exponieren. |
+| QA-4 | Info | Cross-Origin-CMP nicht dismissbar | Cookie-Banner in Fremd-iFrames (Sourcepoint u. Ä.) werden bewusst nicht umgangen; korrekt als `dismissed:false` vermerkt. |
+
+**Nicht live gegengeprüft (Empfehlung: opportunistisch):** echte Cloudflare-Challenge (nur Fixtur simuliert), Interstitial/Alters-Gate-Screenshot, reale Seite > 90 s unter Last.
+
+### Fazit
+**Production-Ready: JA** — keine Critical/High-Bugs. Alle 6 Acceptance Criteria + alle automatisiert prüfbaren Edge Cases bestehen (45/45). Die zwei Low-Findings (QA-1/QA-2) sind Robustheits-Verbesserungen, keine Blocker; sinnvoll im Zuge von PROJ-5 (Orchestrierung) mitzunehmen.
 
 ## Deployment
 _To be added by /abc-deploy_

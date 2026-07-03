@@ -1,6 +1,6 @@
 # PROJ-4: Design-Scoring & Report
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-07-02
 **Last Updated:** 2026-07-03
 
@@ -177,4 +177,9 @@ Keine Fremd-Features berührt (reine Neu-Dateien + additive README-/INDEX-Änder
 **READY.** Keine offenen Critical/High/Medium-Bugs mehr; alle 7 AC bestanden, alle 5 QA-Bugs behoben und per Regressionstest abgesichert (50/50 grün). Freigabe für `/abc-deploy`.
 
 ## Deployment
-_To be added by /abc-deploy_
+**Deployed:** 2026-07-03 · **Version/Tag:** `v0.1.0` (Stufe 1 komplett) · **Ziel:** GitHub-Quell-Release
+
+- **Repo:** https://github.com/ms-qql/ui-check
+- **Art:** CLI-/Claude-Code-Skill-Tool (kein Web-Host/Container) — "Deploy" = Veröffentlichung des getesteten Standes auf GitHub (`main`).
+- **Enthalten:** PROJ-4 (Design-Scoring & Report (score-report.sh)) als Teil des Stufe-1-Bundles (Capture → Lighthouse → Branding → Scoring → Orchestrierung `ui-check`).
+- **Nutzung:** siehe `scripts/README.md` bzw. `.claude/skills/ui-check/SKILL.md`.

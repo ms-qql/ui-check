@@ -1,6 +1,6 @@
 # PROJ-5: Skill-Orchestrierung (`ui-check`)
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-07-02
 **Last Updated:** 2026-07-03
 
@@ -143,4 +143,9 @@ Jeder Lauf führt `status.json` (Phase, Zeiten, Teilfehler) — spätere Fortsch
 **READY.** Keine Critical/High/Medium-Bugs. Die drei Low-Findings sind kosmetisch/Aufräumen und können vor oder nach dem Deploy adressiert werden.
 
 ## Deployment
-_To be added by /abc-deploy_
+**Deployed:** 2026-07-03 · **Version/Tag:** `v0.1.0` (Stufe 1 komplett) · **Ziel:** GitHub-Quell-Release
+
+- **Repo:** https://github.com/ms-qql/ui-check
+- **Art:** CLI-/Claude-Code-Skill-Tool (kein Web-Host/Container) — "Deploy" = Veröffentlichung des getesteten Standes auf GitHub (`main`).
+- **Enthalten:** PROJ-5 (Skill-Orchestrierung (ui-check)) als Teil des Stufe-1-Bundles (Capture → Lighthouse → Branding → Scoring → Orchestrierung `ui-check`).
+- **Nutzung:** siehe `scripts/README.md` bzw. `.claude/skills/ui-check/SKILL.md`.

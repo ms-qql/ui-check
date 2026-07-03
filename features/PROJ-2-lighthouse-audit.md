@@ -1,6 +1,6 @@
 # PROJ-2: Lighthouse-Audit
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-07-02
 **Last Updated:** 2026-07-03
 
@@ -149,4 +149,9 @@ Keine (Critical/High/Medium/Low = 0/0/0/0).
 ### Production-Ready: **JA** — keine Critical/High-Bugs.
 
 ## Deployment
-_To be added by /abc-deploy_
+**Deployed:** 2026-07-03 · **Version/Tag:** `v0.1.0` (Stufe 1 komplett) · **Ziel:** GitHub-Quell-Release
+
+- **Repo:** https://github.com/ms-qql/ui-check
+- **Art:** CLI-/Claude-Code-Skill-Tool (kein Web-Host/Container) — "Deploy" = Veröffentlichung des getesteten Standes auf GitHub (`main`).
+- **Enthalten:** PROJ-2 (Lighthouse-Audit (lh-audit.sh)) als Teil des Stufe-1-Bundles (Capture → Lighthouse → Branding → Scoring → Orchestrierung `ui-check`).
+- **Nutzung:** siehe `scripts/README.md` bzw. `.claude/skills/ui-check/SKILL.md`.

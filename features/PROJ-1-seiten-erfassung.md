@@ -1,6 +1,6 @@
 # PROJ-1: Seiten-Erfassung (Capture)
 
-## Status: In Progress
+## Status: Deployed
 **Created:** 2026-07-02
 **Last Updated:** 2026-07-02
 
@@ -161,4 +161,9 @@ Ausführen: `bash scripts/tests/capture_test.sh` (startet Fixture-Server automat
 **Production-Ready: JA** — keine Critical/High-Bugs. Alle 6 Acceptance Criteria + alle automatisiert prüfbaren Edge Cases bestehen (45/45). Die zwei Low-Findings (QA-1/QA-2) sind Robustheits-Verbesserungen, keine Blocker; sinnvoll im Zuge von PROJ-5 (Orchestrierung) mitzunehmen.
 
 ## Deployment
-_To be added by /abc-deploy_
+**Deployed:** 2026-07-03 · **Version/Tag:** `v0.1.0` (Stufe 1 komplett) · **Ziel:** GitHub-Quell-Release
+
+- **Repo:** https://github.com/ms-qql/ui-check
+- **Art:** CLI-/Claude-Code-Skill-Tool (kein Web-Host/Container) — "Deploy" = Veröffentlichung des getesteten Standes auf GitHub (`main`).
+- **Enthalten:** PROJ-1 (Seiten-Erfassung (capture.sh)) als Teil des Stufe-1-Bundles (Capture → Lighthouse → Branding → Scoring → Orchestrierung `ui-check`).
+- **Nutzung:** siehe `scripts/README.md` bzw. `.claude/skills/ui-check/SKILL.md`.

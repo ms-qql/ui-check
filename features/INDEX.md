@@ -5,11 +5,11 @@
 
 | ID | Feature | Prio | Stufe | Status | Abhängigkeiten |
 |---|---|---|---|---|---|
-| PROJ-1 | [Seiten-Erfassung (Capture)](PROJ-1-seiten-erfassung.md) | P0 | 1 | Planned | — |
-| PROJ-2 | [Lighthouse-Audit](PROJ-2-lighthouse-audit.md) | P0 | 1 | Planned | — |
-| PROJ-3 | [Branding-Extraktion](PROJ-3-branding-extraktion.md) | P0 | 1 | Planned | PROJ-1 |
-| PROJ-4 | [Design-Scoring & Report](PROJ-4-design-scoring-report.md) | P0 | 1 | Planned | PROJ-1, PROJ-2, PROJ-3 |
-| PROJ-5 | [Skill-Orchestrierung (`ui-check`)](PROJ-5-skill-orchestrierung.md) | P0 | 1 | Planned | PROJ-1–4 |
+| PROJ-1 | [Seiten-Erfassung (Capture)](PROJ-1-seiten-erfassung.md) | P0 | 1 | Deployed | — |
+| PROJ-2 | [Lighthouse-Audit](PROJ-2-lighthouse-audit.md) | P0 | 1 | Deployed | — |
+| PROJ-3 | [Branding-Extraktion](PROJ-3-branding-extraktion.md) | P0 | 1 | Deployed | PROJ-1 |
+| PROJ-4 | [Design-Scoring & Report](PROJ-4-design-scoring-report.md) | P0 | 1 | Deployed | PROJ-1, PROJ-2, PROJ-3 |
+| PROJ-5 | [Skill-Orchestrierung (`ui-check`)](PROJ-5-skill-orchestrierung.md) | P0 | 1 | Deployed | PROJ-1–4 |
 | PROJ-6 | [Redesign-Generierung Safe+Bold](PROJ-6-redesign-generierung.md) | P1 | 2 | Planned | PROJ-3, PROJ-4, PROJ-5 |
 | PROJ-7 | [Mockup-Export (HTML)](PROJ-7-mockup-export-html.md) | P1 | 2 | Planned | PROJ-6 |
 | PROJ-8 | [Vorher/Nachher & Voting](PROJ-8-vorher-nachher-voting.md) | P1 | 2 | Planned | PROJ-1, PROJ-7 |

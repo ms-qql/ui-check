@@ -1,0 +1,357 @@
+# scripts/ — UI-Check Pipeline-Skripte
+
+CLI-Bausteine der UI-Check-Pipeline (kein FastAPI/Flutter — siehe PRD).
+Jeder Schritt schreibt in den **Run-Ordner-Kontrakt** (`runs/YYYY-MM-DD-<domain>-NNN/`).
+
+## `capture.sh` — Seiten-Erfassung (PROJ-1)
+
+Erfasst eine öffentliche URL visuell + strukturell als Grundlage für PROJ-2/3/4.
+
+```bash
+scripts/capture.sh <url> [--out <run-dir>] [--timeout 60] [--max-height 20000]
+```
+
+- `<url>` — Ziel-URL (Protokoll optional, `https://` wird ergänzt).
+- `--out <run-dir>` — Run-Ordner. Ohne Angabe wird `runs/<datum>-<domain>-NNN` automatisch angelegt.
+- `--timeout` — Preflight-Timeout in Sekunden (Default 60).
+- `--max-height` — Screenshot-Höhenkappung in px (Default 20000).
+
+### Ausgabe (Run-Ordner-Kontrakt)
+
+```
+<run-dir>/
+├── meta.json                URL, finale URL, HTTP-Status, Dauer, Vermerke, Screenshot-Liste
+└── capture/
+    ├── shot-375.png         Fullpage-Screenshot 375 px (Mobil)
+    ├── shot-768.png         Fullpage-Screenshot 768 px (Tablet)
+    ├── shot-1440.png        Fullpage-Screenshot 1440 px (Desktop)
+    ├── snapshot.txt         A11y-Tree (token-kompakt, für den Claude-Judge in PROJ-4)
+    └── dom-meta.json        Title, Meta-Description, Favicon, OG-Tags, Sektionen-Anzahl
+```
+
+### Exit-Codes
+
+| Code | Bedeutung |
+|---|---|
+| `0` | Erfolgreich erfasst |
+| `2` | Sauberer Abbruch: nicht erreichbar (DNS/Timeout/HTTP ≥ 400), Bot-Schutz, kein HTML-Dokument |
+| `1` | Interner Fehler (fehlendes Tool, ungültige Argumente) |
+
+Bei Exit 2 wird — sofern der Run-Ordner steht — trotzdem ein `meta.json` mit
+`status: "aborted"` und deutscher `error`-Meldung geschrieben.
+
+### Verhalten
+
+- **Redirects:** folgt der Kette (http→https, www, Sprach-Redirect); die finale URL landet in `meta.json`.
+- **Lazy-Loading:** Scroll-Durchlauf vor jedem Screenshot löst nachladende Inhalte aus.
+- **Cookie-Banner:** Best-Effort-Dismiss über gängige Selektoren/Buttontexte (OneTrust, Cookiebot, Usercentrics, Didomi, „Alle akzeptieren" …). Erfolg/Misserfolg in `meta.json` unter `cookie_banner`. Banner in Cross-Origin-iFrames (z. B. Sourcepoint) werden bewusst **nicht** umgangen.
+- **Bot-Schutz:** Cloudflare-/Challenge-Erkennung → sauberer Abbruch, kein Umgehungsversuch (PRD-Non-Goal).
+- **Höhenkappung:** Seiten > `--max-height` werden auf die oberen `max-height` px gekappt (Vermerk in `meta.json`).
+- **SPA-Leerverdacht:** sehr wenig sichtbarer Text nach Network-Idle → `content_suspicion: "spa_empty"`.
+
+## `lh-audit.sh` — Lighthouse-Audit (PROJ-2)
+
+Misst die technische Qualität der Ziel-URL mit der lokalen Lighthouse-CLI
+(headless Chrome): Performance/Core-Web-Vitals, Accessibility, SEO, Best
+Practices — maschinenlesbare Basis für das Score-Panel in PROJ-4. Läuft
+parallel zu `capture.sh` (gleiche Ziel-URL, gleicher Run-Ordner).
+
+```bash
+scripts/lh-audit.sh <url> [--out <run-dir>] [--desktop] [--timeout 120]
+```
+
+- `<url>` — Ziel-URL (Protokoll optional, `https://` wird ergänzt).
+- `--out <run-dir>` — Run-Ordner (i. d. R. der von `capture.sh`). Ohne Angabe
+  wird `runs/<datum>-<domain>-NNN` automatisch angelegt.
+- `--desktop` — zusätzlich zum Mobile-Lauf (Default) einen Desktop-Lauf messen.
+- `--timeout` — Hard-Timeout je Lauf in Sekunden (Default 120).
+
+### Ausgabe (Run-Ordner-Kontrakt)
+
+```
+<run-dir>/lighthouse/
+├── lighthouse-mobile.json    Voll-Report Mobile (Beweis/Archiv)
+├── lighthouse-desktop.json   Voll-Report Desktop (nur bei --desktop)
+├── lh-summary.json           kompaktes Extrakt für die Pipeline (s. u.)
+└── lighthouse.log            Roh-Stderr der Lighthouse-Läufe (Diagnose)
+```
+
+`lh-summary.json` (Mobile ist kanonisch, Desktop optional unter `.desktop`):
+
+```jsonc
+{
+  "url": "…", "final_url": "…",
+  "status": "ok",            // ok | failed
+  "error": null,             // Grund bei failed
+  "timestamp": "…Z", "duration_seconds": 21, "lighthouse_version": "13.4.0",
+  "form_factors": ["mobile", "desktop"],
+  "scores": { "performance": 100, "accessibility": 100, "best_practices": 96, "seo": 100 },
+  "core_web_vitals": {       // Google-Schwellen → rating good|needs-improvement|poor
+    "lcp":  { "value_ms": 751, "rating": "good" },   // ≤2500 / ≤4000
+    "cls":  { "value": 0,      "rating": "good" },   // ≤0.1  / ≤0.25
+    "tbt":  { "value_ms": 0,   "rating": "good" },   // ≤200  / ≤600
+    "fcp":  { "value_ms": 616, "rating": "good" },   // ≤1800 / ≤3000
+    "speed_index": { "value_ms": 616, "rating": "good" } // ≤3400 / ≤5800
+  },
+  "opportunities": [ { "id": "…", "title": "…", "savings_ms": 1234 } ], // max. 5, savings > 0
+  "cookie_banner": { "dismissed": false, "note": "…" }, // aus PROJ-1 meta.json gespiegelt
+  "desktop": { "scores": { … }, "core_web_vitals": { … } } // nur bei --desktop
+}
+```
+
+### Exit-Codes
+
+| Code | Bedeutung |
+|---|---|
+| `0` | Audit erfolgreich (`status: "ok"`) |
+| `1` | Lighthouse-Absturz/Timeout **oder** interner Fehler (fehlendes Tool, ungültige Argumente) |
+
+Bei einem Lighthouse-Fehler wird bewusst **nicht abgebrochen**: es entsteht ein
+`lh-summary.json` mit `status: "failed"` + deutschem `error`-Grund, damit die
+Pipeline (PROJ-4/5) degradiert weiterläuft und die Dimension als „nicht messbar"
+ausweisen kann.
+
+### Verhalten
+
+- **Lokale CLI statt PageSpeed-API:** kein API-Key, keine Quota. Trade-off: keine
+  CrUX-Felddaten (dokumentiert, später zuschaltbar).
+- **Voll-JSON bleibt erhalten** → Befunde in PROJ-4 sind stets belegbar; die
+  Pipeline liest nur `lh-summary.json`.
+- **Chrome:** nutzt `CHROME_PATH` (falls gesetzt), sonst das erste gefundene
+  `chrome`/`google-chrome`/`chromium` im PATH — z. B. das Chromium der
+  agent-browser-/Playwright-Installation.
+- **Cookie-Banner-Spiegelung:** liegt im Run-Ordner ein `meta.json` aus PROJ-1,
+  wird dessen `cookie_banner`-Vermerk übernommen; ein nicht geschlossenes Banner
+  wird als Consent-Warnung notiert (Messung ggf. verfälscht).
+
+## `brand-extract.sh` — Branding-Extraktion (PROJ-3)
+
+Extrahiert das faktische Design-System der gerenderten Ziel-Seite als
+strukturierte Tokens (Farben mit Rollen-Vermutung, Fonts, Radius, Spacing,
+Schatten) + Tailwind-4-Theme + Logo + Kurzprofil mit WCAG-AA-Kontrastverstößen.
+Basis für das Redesign (Stufe 2) und die Branding-Bibliothek (PROJ-12).
+
+```bash
+scripts/brand-extract.sh <url> [--out <run-dir>] [--timeout 60] [--brandfetch-key <id>]
+```
+
+- `<url>` — Ziel-URL (Protokoll optional, `https://` wird ergänzt).
+- `--out <run-dir>` — Run-Ordner (i. d. R. der von `capture.sh`). Ohne Angabe
+  wird `runs/<datum>-<domain>-NNN` automatisch angelegt.
+- `--timeout` — Ladewartezeit in Sekunden (Default 60).
+- `--brandfetch-key <id>` — optionale Brandfetch-Client-ID (oder Env
+  `BRANDFETCH_CLIENT_ID`) für die Logo-CDN; ohne Key wird der DOM-Fallback genutzt.
+
+### Ausgabe (Run-Ordner-Kontrakt)
+
+```
+<run-dir>/branding/
+├── tokens.json          DTCG-orientierte Tokens (Farben mit Rollen-Vermutung, Fonts,
+│                        Radius, Spacing, Schatten) — deterministisch
+├── tailwind-theme.css   @theme-Variablen (Tailwind 4), aus tokens.json generiert
+├── branding.md          Kurzprofil: Palette, Fonts, WCAG-AA-Kontrast, Tonalität (LLM)
+├── logo.*               Logo + Quellenvermerk (brandfetch | dom | null)
+├── branding-meta.json   Status, Werkzeug, Extraktor-Stats, Logo-Quelle, Vermerke
+└── raw-extract.json     Roh-Extrakt des Browser-Laufs (Beweis/Archiv)
+```
+
+### Exit-Codes
+
+| Code | Bedeutung |
+|---|---|
+| `0` | Vollständig erfolgreich (Tokens **und** Logo) |
+| `1` | Teilausfall: kein Logo / Seite nicht ladbar / leere Tokens — Pipeline läuft degradiert weiter, Outputs stehen trotzdem (`status: "partial"`) |
+| `2` | Interner Fehler (fehlendes Tool, ungültige Argumente) |
+
+### Verhalten & Deterministik-Grenze
+
+- **Computed styles statt OSS-Tool-Kaskade:** Statt der im Tech-Design genannten
+  (nicht installierten) Tools `design-extract`/`dembrandt`/`css-analyzer` läuft die
+  Extraktion über einen eigenen, zero-dependency Extraktor (`lib/brand-extract.js`)
+  auf `getComputedStyle` der gerenderten Seite — robuster und hermetisch testbar.
+- **Deterministisch (reproduzierbar):** Farben (inkl. Clustering naher Nachbarn),
+  Fonts (Display/Text + Fundstellen), Radius, Spacing, Schatten und die
+  WCAG-AA-Kontrastprüfung. Zwei Läufe liefern identische Tokens.
+- **Markierter Heuristik-Anteil:** die Rollen-Vermutung (primary/accent/surface/text)
+  ist eine deterministische Heuristik und in `tokens.json` als
+  `role_method: "heuristic"` gekennzeichnet — in der Orchestrierung (PROJ-5) durch
+  Claude überprüf-/überschreibbar.
+- **LLM-Anteil:** die Tonalität (2–4 Sätze) wird **nicht** vom Skript verfasst,
+  sondern in PROJ-5 aus dem in `raw-extract.json`/`branding.md` gelieferten
+  `copy_sample` von Claude abgeleitet (in `branding.md` als LLM-Anteil markiert).
+- **Logo-Kaskade:** Brandfetch-Logo-CDN (nur mit Client-ID) → Inline-SVG im Header
+  → DOM-`<img>`/Icon/OG-Image (Download). Kein Logo → `logo: null` (kein Fehler).
+- **Cookie-Banner:** gleiche Best-Effort-Kaskade wie `capture.sh`.
+- **Dark-Mode:** ist der Default-Zustand dunkel, wird der dunkle Zustand extrahiert
+  und in `branding.md` + `branding-meta.json` vermerkt.
+- **Farb-Clustering:** RGB-Nachbarn (Distanz < 12) werden zusammengefasst; Kern-Palette
+  = Top 8 nach Häufigkeit, Rest als `extended` (max. 24 gesamt).
+
+## `score-report.sh` — Design-Scoring & Report (PROJ-4)
+
+Mergt die **Claude-Judge-Ausgabe** (`judge.json`) mit den Lighthouse- (PROJ-2) und
+Branding-Dimensionen (PROJ-3) zum zentralen Stufe-1-Deliverable: `scores.json`
+(maschinenlesbar) + `report.md` (deutsch, kundentauglich). Das Skript **bewertet
+nicht** — es rechnet & rendert rein deterministisch (jq/bash), damit reproduzierbar.
+Der Judge ist Claude selbst; die Orchestrierung (PROJ-5) erzeugt `judge.json` anhand
+der versionierten Rubriken in `rubrics/`.
+
+```bash
+scripts/score-report.sh <run-dir> [--judge <file>] [--industry <tag>] [--weights v,s,p,a,c]
+```
+
+- `<run-dir>` — Run-Ordner aus PROJ-1 (mit `meta.json`, `status: "ok"`). **Pflicht.**
+- `--judge <file>` — Judge-Ausgabe (Default `<run-dir>/judge.json`).
+- `--industry <tag>` — Industrie-Tag für Benchmark/`data/runs.jsonl` (Default `unknown`).
+- `--weights v,s,p,a,c` — Gewichte visuell,slop,performance,a11y,conversion
+  (Default `25,15,15,15,30`). Nicht messbare Dimensionen werden **renormiert**.
+
+### Judge-Ausgabe-Kontrakt (`<run-dir>/judge.json`)
+
+Von PROJ-5 aus drei Judge-Pässen gegen `rubrics/` erzeugt:
+
+```jsonc
+{
+  "rubric_version": "2026.07-1",     // MUSS zu rubrics/VERSION passen (sonst Abbruch)
+  "language_confident": true,        // Copy-Befunde nur bei sicherer Sprache
+  "app_mode": false,                 // App/Tool statt Landing? → Report-Hinweis
+  "cta_present": true,               // kein CTA → Action/Logic auf Info-Aufgabe bezogen
+  "visual":     { "score": 72, "findings": [ … ] },              // 0–100 (rubrics/visual.md)
+  "ki_score":   3,                                               // 0–10 design-ai-check (rubrics/slop.md)
+  "slop":       { "findings": [ … ] },                           // optional; Score kommt aus ki_score
+  "conversion": { "clarity": 80, "credibility": 70, "logic": 65, // je 0–100 (rubrics/conversion.md)
+                  "action": 55, "emotion": 60, "findings": [ … ] }
+}
+```
+
+Jeder **Befund** (`findings[]`): `{ title, severity: hoch|mittel|niedrig, evidence, location, source }`.
+`score-report.sh` ergänzt Befunde aus Lighthouse-Opportunities (`source: lighthouse`) und
+Kontrast-Verstößen (`source: contrast`) und **verwirft unbelegte** Befunde (Beleg + Fundort Pflicht).
+
+### Dimensionen & Gesamtscore
+
+| Dimension | Herkunft |
+|---|---|
+| `visuell` | `judge.visual.score` |
+| `slop` | `(10 − judge.ki_score) · 10` (invertiert: 0 Slop = 100) |
+| `performance` | `lh-summary.scores.performance` (fehlt/failed → *nicht messbar*) |
+| `accessibility` | `lh a11y − min(4·Kontrastverstöße, 40)` (fehlt → *nicht messbar*) |
+| `conversion` | Mittel der fünf Cai-Teilscores |
+
+Gesamtscore = gewichtetes Mittel; **nicht messbare** Dimensionen fallen aus der
+Gewichtung und werden **renormiert** (kein Null-Strafe-Effekt).
+
+### Ausgabe (Run-Ordner-Kontrakt)
+
+```
+<run-dir>/scores.json    Dimensionen · Cai-Teilscores · Gewichte (+ renormiert) ·
+                         Gesamtscore · Befunde · Benchmark · Rubrik-Version
+<run-dir>/report.md      Score-Panel · Befunde nach Severity · Kurzempfehlungen ·
+                         Benchmark-Zeile · Meta (URL, Datum, Lauf-ID, Rubrik)
+data/runs.jsonl          + 1 Zeile (append-only, nur URL-Hash — s. data/README.md)
+```
+
+### Exit-Codes
+
+| Code | Bedeutung |
+|---|---|
+| `0` | Report erzeugt, alle 5 Dimensionen messbar |
+| `1` | Report erzeugt, aber **degradiert** (≥ 1 Dimension nicht messbar ODER Befund-Minimum unterschritten) — Pipeline läuft weiter |
+| `2` | Input-Gate/intern: kein Capture (`status ≠ ok`), fehlendes/ungültiges `judge.json`, Rubrik-Version-Konflikt, ungültige Argumente |
+
+### Verhalten
+
+- **Reproduzierbarkeit:** rein deterministisch — identischer Input ⇒ identischer Score
+  (Judge-Streuung via Rubrik-Anker gedämpft; AC-Ziel ±5). Rubrik-Version wird erzwungen.
+- **Befund-Menge:** 5–15 Befunde; bei Gesamtscore ≥ 85 sinkt das Minimum auf 3.
+- **Benchmark:** erscheint erst ab n ≥ 10 Läufen gleichen `industry_tag` in `runs.jsonl`.
+- **Kein Glätten:** Widersprüche Judge ↔ Lighthouse (schön, aber langsam) bleiben getrennt
+  mit Quelle stehen.
+- **Rubriken** liegen versioniert in `rubrics/` (`visual.md`, `slop.md`, `conversion.md`,
+  `VERSION`); jede Änderung = neue Version (Benchmark-Vergleichbarkeit).
+
+## `ui-check.sh` — Skill-Orchestrierung (PROJ-5)
+
+Deterministischer Treiber, den der Claude-Code-Skill `ui-check`
+(`.claude/skills/ui-check/SKILL.md`) aufruft. Führt die vier Schritt-CLIs in
+korrekter Reihenfolge (Capture ∥ Lighthouse parallel, dann Branding) aus,
+verwaltet den Run-Ordner + `status.json` und wendet die zentrale Fehlerpolitik
+an. Die eigentliche Bewertung (der **Judge**) ist Claude selbst; sie liegt
+zwischen den beiden Treiber-Modi.
+
+```bash
+# 1) COLLECT — Datenerfassung
+scripts/ui-check.sh <url> [--industry <tag>] [--prompt "…"] [--desktop] [--out <run-dir>] [--timeout 60]
+# 2) (Claude) Judge-Pass gegen rubrics/ → <run-dir>/judge.json
+# 3) FINALIZE — Scoring & Report
+scripts/ui-check.sh --finalize <run-dir> [--industry <tag>] [--weights v,s,p,a,c]
+```
+
+- `<url>` — Ziel-URL (Protokoll optional).
+- `--industry <tag>` — Branchen-Tag für Benchmark/`runs.jsonl`. Fehlt er, wird
+  `industry_source: "auto"` vermerkt (Claude schlägt den Tag im Skill vor).
+- `--prompt "…"` — Nutzer-Kontext, in `ui-check.json` abgelegt und an den Judge
+  durchgereicht.
+- `--desktop` — zusätzlicher Lighthouse-Desktop-Lauf.
+- `--out` / `--timeout` — Run-Ordner erzwingen bzw. Preflight-/Ladezeit.
+
+### Ausgabe (Run-Ordner-Kontrakt, zusätzlich zu PROJ-1–4)
+
+```
+<run-dir>/status.json    Lauf-Status + je-Phase (capture/lighthouse/branding/scoring):
+                         status · duration_seconds · error — Fortschrittsquelle für Jupiter (PROJ-14)
+<run-dir>/ui-check.json  Kontext: url, final_url, industry_tag(+source), user_prompt,
+                         desktop, rubric_version — Brücke Collect → Judge → Finalize
+<run-dir>/.{capture,lighthouse,branding}.log   Roh-Stdout/-Stderr der Schritte (Diagnose)
+```
+
+### Fehlerpolitik (zentral im Orchestrator)
+
+| Schritt | Fehler | Verhalten |
+|---|---|---|
+| Capture | Exit ≠ 0 | **Abbruch** des Laufs (`status: aborted`, Exit 2) — nichts zu bewerten. |
+| Lighthouse | Exit ≠ 0 / `status: failed` | degradieren: Perf/A11y „nicht messbar", renormiert (Exit 1). |
+| Branding | Exit ≠ 0 | degradieren: Vermerk, Lauf läuft weiter (Exit 1). |
+| Scoring | score-report Exit 1 / 2 | Exit 1 (degradiert) bzw. Exit 2 (Gate) durchgereicht. |
+
+### Exit-Codes
+
+| Code | Bedeutung |
+|---|---|
+| `0` | Lauf vollständig, alle Dimensionen messbar |
+| `1` | Teilfehler: Lauf nutzbar, aber degradiert (Dimension „nicht messbar") |
+| `2` | Abbruch: Capture-Fehler, Input-Gate, ungültige Argumente, fehlendes Tool |
+
+### Verhalten
+
+- **Parallelität:** Capture und Lighthouse starten gleichzeitig (beide brauchen nur
+  die URL, gleicher Run-Ordner); Branding folgt nach Capture; Scoring erst nach dem
+  Judge-Pass.
+- **Preflight:** prüft `agent-browser`, `lighthouse`, `jq`, `curl` + die vier
+  Schritt-Skripte **vor** jeder Arbeit — deutsche Installationsanleitung statt Crash
+  mitten im Lauf.
+- **Headless:** bei vollständigen Parametern keine interaktiven Abfragen; `status.json`
+  + Exit-Codes steuern den aufrufenden Prozess (Jupiter/PROJ-14).
+- **Kollisionssicherheit:** NNN-Suffix pro Tag/Domain (wie `capture.sh`); parallele
+  Läufe kollidieren nicht; `runs.jsonl`-Append (durch `score-report.sh`) ist zeilenatomar.
+- **Ctrl-C:** Run-Ordner bleibt mit `status: aborted` in `status.json` erhalten.
+- **Testbarkeit:** `UI_CHECK_BIN` lenkt die Schritt-CLIs auf ein Stub-Verzeichnis um
+  (siehe `scripts/tests/ui_check_test.sh`) — hermetischer Orchestrierungs-Test ohne
+  Browser/Lighthouse/Netz.
+
+## Voraussetzungen
+
+- **jq** genügt für `score-report.sh` (PROJ-4) — kein Browser/Lighthouse nötig.
+- **lighthouse** (npm, global) für PROJ-2:
+  ```bash
+  npm install -g lighthouse
+  ```
+- **agent-browser** (npm, global) + Chromium:
+  ```bash
+  npm install -g agent-browser
+  agent-browser install            # lädt Chrome-for-Testing
+  ```
+- **curl**, **jq** (Standard-CLI-Tools).
+- In Container-/VM-Umgebungen startet Chromium nur mit `--no-sandbox`. Das Skript
+  setzt `AGENT_BROWSER_ARGS=--no-sandbox,--disable-dev-shm-usage` als Default;
+  eine bereits gesetzte Variable wird respektiert (Override möglich).

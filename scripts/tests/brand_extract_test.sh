@@ -163,7 +163,17 @@ assert_eq "$(mj '.dark_mode' "$R")" "true" "branding-meta.dark_mode == true"
 assert_eq "$(rj '.dark_mode_hint' "$R")" "true" "raw dark_mode_hint == true"
 grep -qi "Dark-Mode" "$R/branding/branding.md" && ok "branding.md vermerkt Dark-Mode" || bad "Dark-Mode-Vermerk fehlt"
 jq -e . "$R/branding/tokens.json" >/dev/null 2>&1 && ok "tokens.json trotz Dark-Mode gültig" || bad "tokens.json ungültig (Dark-Mode)"
-# Bekannte Einschränkung (BUG-1, Medium): surface/text-Rolle bleibt im Dark-Mode leer.
+# BUG-1-Fix: Rollen-Polarität am Hintergrund ausgerichtet → im Dark-Mode ist
+# surface dunkel und text hell (nicht mehr leer).
+s_hex="$(tj '.color.surface["$value"]' "$R")"
+t_hex="$(tj '.color.text["$value"]' "$R")"
+lum_of() { jq -r --arg h "$2" '.colors[]|select(.hex==$h)|.l' "$1/branding/raw-extract.json" 2>/dev/null | head -1; }
+s_l="$(lum_of "$R" "$s_hex")"; t_l="$(lum_of "$R" "$t_hex")"
+[[ -n "$s_hex" && "$s_hex" != "null" ]] && ok "surface-Rolle im Dark-Mode gesetzt ($s_hex)" || bad "surface-Rolle im Dark-Mode leer (BUG-1)"
+[[ -n "$t_hex" && "$t_hex" != "null" ]] && ok "text-Rolle im Dark-Mode gesetzt ($t_hex)" || bad "text-Rolle im Dark-Mode leer (BUG-1)"
+[[ -n "$s_l" ]] && awk "BEGIN{exit !($s_l < 0.4)}" && ok "surface ist dunkel (l=$s_l < 0.4)" || bad "surface nicht dunkel im Dark-Mode: l=$s_l"
+[[ -n "$t_l" ]] && awk "BEGIN{exit !($t_l > 0.5)}" && ok "text ist hell (l=$t_l > 0.5)" || bad "text nicht hell im Dark-Mode: l=$t_l"
+grep -q -- "--color-surface" "$R/branding/tailwind-theme.css" && grep -q -- "--color-text" "$R/branding/tailwind-theme.css" && ok "Theme hat --color-surface + --color-text (Dark-Mode)" || bad "Theme-Farbvariablen fehlen im Dark-Mode"
 
 # ── Edge D: Argument-Validierung (Exit 2) ──────────────────────────────────
 echo; echo "▶ D: Argument-Validierung (interner Fehler → Exit 2)"

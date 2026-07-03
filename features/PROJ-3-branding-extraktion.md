@@ -1,6 +1,6 @@
 # PROJ-3: Branding-Extraktion
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-07-02
 **Last Updated:** 2026-07-03
 
@@ -110,7 +110,7 @@ branding/
 
 ## QA Test Results
 **Getestet:** 2026-07-03 · **Tester:** QA (Red-Team) · **Suite:** `scripts/tests/brand_extract_test.sh`
-**Ergebnis:** **55 Assertions bestanden, 0 fehlgeschlagen** · Umgebung: agent-browser 0.27 + lokale Fixtures (kein Netz)
+**Ergebnis:** **60 Assertions bestanden, 0 fehlgeschlagen** · Umgebung: agent-browser 0.27 + lokale Fixtures (kein Netz)
 
 ### Acceptance Criteria (5/5 bestanden)
 | # | Kriterium | Status | Nachweis |
@@ -127,7 +127,7 @@ branding/
 | >12 Farben (Gruppe E) | Kern-Palette ≤ 8, Rest `extended` | ✅ 16 Farben → Palette 8 / extended 8 |
 | Kein Logo (Gruppe C) | `logo: null`, Exit 1, Tokens trotzdem | ✅ `status: partial`, Outputs vollständig |
 | Inline-SVG-Logo (Gruppe F) | `logo.svg`, source `dom` | ✅ |
-| Dark-Mode-Default (Gruppe G) | Default-Zustand + Vermerk | ⚠️ erkannt & vermerkt, aber **BUG-1** (Rollen) |
+| Dark-Mode-Default (Gruppe G) | Default-Zustand + Vermerk + korrekte Rollen | ✅ surface `#0a0a0a`, text `#e5e7eb` (BUG-1 behoben) |
 | Seite nicht ladbar | Exit 1, gültige leere Tokens + CSS | ✅ graceful degradation |
 | Argument-Fehler (Gruppe D) | Exit 2, deutsche Meldung | ✅ keine URL / unbekannte Option |
 
@@ -142,27 +142,25 @@ branding/
 > Kein Mandanten-/Auth-/RLS-Kontext (lokale CLI-Pipeline, keine DB/API) — entsprechende Red-Team-Punkte n/a.
 
 ### Gefundene Bugs
-- **BUG-1 (Medium) — Rollen-Heuristik ist Light-Mode-fixiert.**
-  Auf dunklen Default-Seiten bleiben **`surface`- und `text`-Rolle leer** (dadurch fehlen
-  `--color-surface`/`--color-text` im generierten Theme). Ursache: die Schwellen sind
-  hart auf hell (`text` erfordert `l<0.6`, `surface` erfordert `l>0.6`).
-  *Repro:* `brand-extract.sh <dark-site> --out X` → `tokens.json .color.surface`/`.text` == null.
-  *Auswirkung begrenzt:* Palette enthält die Farben weiterhin (`#0a0a0a`, `#e5e7eb`), Rollen
-  sind ausdrücklich `role_method: "heuristic"` und in PROJ-5 durch Claude überschreibbar;
-  Pipeline bricht nicht ab. *Empfohlener Fix (Backend):* im Extraktor bei `dark_mode_hint`
-  die Lightness-Richtung invertieren (surface = größte Fläche unabhängig von l; text =
-  häufigste Textfarbe unabhängig von l).
+- **BUG-1 (Medium) — Rollen-Heuristik war Light-Mode-fixiert. ✅ BEHOBEN (2026-07-03).**
+  Auf dunklen Default-Seiten blieben `surface`- und `text`-Rolle leer (harte Schwellen
+  `text: l<0.6`, `surface: l>0.6`). *Fix:* Der Extraktor bestimmt jetzt die Polarität am
+  tatsächlichen Seitenhintergrund (`effBg(body)`, `relLum < 0.2` → Dark-Mode) und dreht die
+  Lightness-Richtung um — mit robustem Fallback (surface = größte Hintergrundfläche, text =
+  häufigste Textfarbe), falls die Präferenz nicht greift. *Verifiziert* (Gruppe G): dunkle
+  Seite → surface `#0a0a0a` (l<0.4), text `#e5e7eb` (l>0.5), Theme mit `--color-surface`
+  + `--color-text`; Light-Mode-Regression (`/branding`) unverändert.
 
-- **BUG-2 (Low) — Markdown-Robustheit im Copy-Sample.**
+- **BUG-2 (Low, offen) — Markdown-Robustheit im Copy-Sample.**
   Seiten-Copy mit Markdown (`##`, `**`) kann den Blockquote im Tonalitäts-Abschnitt optisch
-  aufbrechen. Rein kosmetisch (kein Sicherheits-/Datenproblem). *Fix optional:* Copy vor der
-  Ausgabe escapen/auf eine Zeile normalisieren.
+  aufbrechen. Rein kosmetisch (kein Sicherheits-/Datenproblem), nicht blockierend.
+  *Fix optional:* Copy vor der Ausgabe escapen/auf eine Zeile normalisieren.
 
 ### Produktionsreife-Empfehlung
-**READY (mit Vorbehalt).** Keine Critical/High-Bugs; alle 5 Acceptance Criteria + 6 Edge Cases
-grün; Security-Red-Team ohne Befund. BUG-1 (Medium) und BUG-2 (Low) blockieren nicht, da die
-Rollen als Heuristik gekennzeichnet und in PROJ-5 überschreibbar sind und die Palette die Daten
-verlustfrei erhält. Empfehlung: BUG-1 vor produktivem Dark-Mode-Einsatz beheben.
+**READY.** Keine Critical/High/Medium-Bugs offen; alle 5 Acceptance Criteria + 7 Edge Cases
+grün (60 Assertions); Security-Red-Team ohne Befund. BUG-1 (Medium) wurde behoben und
+per Regressionstest abgesichert; nur BUG-2 (Low, kosmetisch) bleibt offen und blockiert nicht.
+→ Status **Approved**.
 
 ## Deployment
 _To be added by /abc-deploy_

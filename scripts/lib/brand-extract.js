@@ -204,18 +204,31 @@
   });
 
   // ── Rollen-Heuristik (deterministisch, markiert) ──────────────────────────
-  const roles = {};
-  // text: häufigste dunkle Textfarbe
-  const textCand = colors
-    .filter((c) => c.contexts.text && c.l < 0.6)
+  // Polarität am tatsächlichen Seitenhintergrund ausrichten: auf dunklen Seiten
+  // (Dark-Mode-Default) ist Text hell und Surface dunkel — sonst umgekehrt.
+  const pageBg = effBg(document.body);
+  const darkMode = relLum(pageBg) < 0.2;
+  const roles = { dark_mode: darkMode };
+
+  // text: häufigste Textfarbe der zum Hintergrund passenden Polarität
+  const byText = colors
+    .filter((c) => c.contexts.text)
     .sort((a, b) => (b.contexts.text || 0) - (a.contexts.text || 0));
-  if (textCand[0]) roles.text = textCand[0].hex;
-  // surface: großflächigste helle, neutrale Hintergrundfarbe
-  const surfCand = colors
-    .filter((c) => c.contexts.background && c.neutral && c.l > 0.6)
+  const textPref = darkMode ? byText.filter((c) => c.l > 0.5) : byText.filter((c) => c.l < 0.6);
+  const textPick = textPref[0] || byText[0];
+  if (textPick) roles.text = textPick.hex;
+
+  // surface: großflächigste (neutrale) Hintergrundfarbe passender Polarität
+  const byBg = colors
+    .filter((c) => c.contexts.background)
     .sort((a, b) => b.area - a.area);
-  if (surfCand[0]) roles.surface = surfCand[0].hex;
-  // primary/accent: häufigste gesättigte (nicht-neutrale) Farben
+  const surfPref = darkMode
+    ? byBg.filter((c) => c.neutral && c.l < 0.4)
+    : byBg.filter((c) => c.neutral && c.l > 0.6);
+  const surfPick = surfPref[0] || byBg.filter((c) => c.neutral)[0] || byBg[0];
+  if (surfPick) roles.surface = surfPick.hex;
+
+  // primary/accent: häufigste gesättigte (nicht-neutrale) Farben (polaritätsunabhängig)
   const brand = colors
     .filter((c) => !c.neutral && c.s >= 0.15 && c.l > 0.12 && c.l < 0.92)
     .sort((a, b) => b.count - a.count);
@@ -303,9 +316,8 @@
   if (ogImg) addImg(ogImg, "og", 30);
   logo_candidates.sort((a, b) => b.score - a.score || (b.w * b.h) - (a.w * a.h));
 
-  // ── Dark-Mode-Hinweis ─────────────────────────────────────────────────────
-  const bodyBg = parseColor(getComputedStyle(document.body).backgroundColor);
-  const dark_mode_hint = bodyBg ? relLum(bodyBg) < 0.2 : false;
+  // ── Dark-Mode-Hinweis (gleiche Grundlage wie die Rollen-Polarität) ────────
+  const dark_mode_hint = darkMode;
 
   // ── Top-N-Reduktion für kompakte Ausgabe ──────────────────────────────────
   const topN = (map, n) =>

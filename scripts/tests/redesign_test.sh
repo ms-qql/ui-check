@@ -226,6 +226,11 @@ run_verify "$R"; assert_eq "$?" "1" "Exit 1 bei Whitelist-fremder Dependency"
 assert_eq "$(gate_status "$R" "G13-safe")" "warn" "G13 warnt (jquery)"
 assert_eq "$(jq -r '.phases.redesign.status' "$R/status.json")" "degraded" "status.json: redesign degraded"
 
+R="$WORK/run-f1b"; mk_run "$R"; run_init "$R"; mk_redesign_ok "$R"
+jq '.devDependencies.vite = "^7"' "$R/redesign/bold/package.json" > "$R/p.json" && mv "$R/p.json" "$R/redesign/bold/package.json"
+run_verify "$R"; assert_eq "$?" "1" "Exit 1 bei Whitelist-fremder devDependency"
+assert_eq "$(gate_status "$R" "G13-bold")" "warn" "G13 warnt bei devDependency (vite)"
+
 R="$WORK/run-f2"; mk_run "$R"; run_init "$R"; mk_redesign_ok "$R"
 jq '.language = "en"' "$R/redesign/shared/content.json" > "$R/c.json" && mv "$R/c.json" "$R/redesign/shared/content.json"
 run_verify "$R"; assert_eq "$?" "1" "Exit 1 bei language ≠ de"

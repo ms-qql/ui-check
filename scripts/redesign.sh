@@ -393,7 +393,12 @@ done
 DEP_WL='^(react|react-dom|motion|@paper-design/shaders-react|tailwindcss|@tailwindcss/.+|clsx|tailwind-merge|class-variance-authority|@radix-ui/.+|@phosphor-icons/react|lucide-react)$'
 for v in safe bold; do
   [[ -s "$RD/$v/package.json" ]] || continue
-  extra="$(jq -r '(.dependencies // {}) | keys[]' "$RD/$v/package.json" 2>/dev/null | grep -vE "$DEP_WL" | paste -sd' ')"
+  extra="$(jq -r '
+      ((.dependencies // {}) | keys[] | "dependencies\t" + .),
+      ((.devDependencies // {}) | keys[] | "devDependencies\t" + .)
+    ' "$RD/$v/package.json" 2>/dev/null \
+    | awk -F '\t' -v re="$DEP_WL" '$2 !~ re { print $1 "/" $2 }' \
+    | paste -sd' ')"
   [[ -z "$extra" ]] || gate "G13-$v" warn "Unerwartete Dependencies ($v)" "$extra — prüfen, ob fürs Bundle (PROJ-7) nötig"
 done
 

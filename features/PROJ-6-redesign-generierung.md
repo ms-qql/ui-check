@@ -222,7 +222,7 @@ scripts/tests/redesign_test.sh    # 46 Assertions, hermetisch (nur jq)
 ### Automatisierte Tests
 | Suite | Ergebnis |
 |---|---|
-| `scripts/tests/redesign_test.sh` | 46 bestanden, 0 fehlgeschlagen |
+| `scripts/tests/redesign_test.sh` | 48 bestanden, 0 fehlgeschlagen |
 | `scripts/tests/capture_test.sh` | 45 bestanden, 0 fehlgeschlagen |
 | `scripts/tests/lh_audit_test.sh` | 38 bestanden, 0 fehlgeschlagen |
 | `scripts/tests/brand_extract_test.sh` | 60 bestanden, 0 fehlgeschlagen |
@@ -237,12 +237,12 @@ scripts/tests/redesign_test.sh    # 46 Assertions, hermetisch (nur jq)
 - Keine Secrets/API-Keys im Redesign-Output gefunden.
 
 ### Bugs
-| ID | Severity | Titel | Reproduktion | Erwartet | Ist |
-|---|---|---|---|---|---|
-| PROJ-6-BUG-1 | Medium | Dependency-Whitelist ignoriert `devDependencies` | In `runs/2026-07-03-auxevo.tech-001/redesign/*/package.json` stehen `vite` und `@vitejs/plugin-react` in `devDependencies`; danach `scripts/redesign.sh --verify runs/2026-07-03-auxevo.tech-001` ausfuehren | G13 warnt auch bei unerwarteten `devDependencies` oder dokumentiert explizit, dass nur Runtime-Dependencies geprueft werden | Verify bleibt vollstaendig gruen; G13 existiert nicht im `verify.json`, weil nur `.dependencies` gelesen wird |
+| ID | Severity | Titel | Status | Verifikation |
+|---|---|---|---|---|
+| PROJ-6-BUG-1 | Medium | Dependency-Whitelist ignorierte `devDependencies` | Behoben am 2026-07-03: G13 prueft jetzt `dependencies` und `devDependencies` | `scripts/tests/redesign_test.sh` mit Regression fuer `devDependencies.vite` gruen |
 
 ### Production-Ready Decision
-**READY.** Keine Critical- oder High-Bugs. PROJ-6 kann fuer PROJ-7 genutzt werden; PROJ-6-BUG-1 sollte vor Deployment/Bundle-Hardening gefixt werden, blockiert den aktuellen QA-Status aber nicht.
+**READY.** Keine offenen Critical-, High- oder Medium-Bugs. PROJ-6 kann fuer PROJ-7 genutzt werden; PROJ-6-BUG-1 ist behoben und per Regressionstest abgesichert.
 
 ## Deployment
 _To be added by /abc-deploy_

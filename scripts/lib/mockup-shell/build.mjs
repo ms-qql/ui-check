@@ -33,6 +33,11 @@ fs.mkdirSync(OUT, { recursive: true });
 
 const meta = JSON.parse(fs.readFileSync(path.join(WS, 'meta', 'build-meta.json'), 'utf8'));
 const esbuild = await import('esbuild').catch(() => die('esbuild nicht installiert (node_modules fehlt?)'));
+const readJson = (file, fallback) => {
+  try { return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : fallback; }
+  catch { return fallback; }
+};
+const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
 // ── Varianten-Entries aus den Manifesten ────────────────────────────────────
 const variants = {};
@@ -104,10 +109,82 @@ window.__MOCKUP_MOUNTED = mounted;
 const clientResult = await esbuild.build({
   entryPoints: [clientEntry], write: false,
   bundle: true, platform: 'browser', format: 'iife', target: 'es2020',
-  minify: true, jsx: 'automatic', loader: LOADERS, legalComments: 'none', logLevel: 'warning',
+  minify: true, charset: 'utf8', jsx: 'automatic', loader: LOADERS, legalComments: 'none', logLevel: 'warning',
   define: { 'process.env.NODE_ENV': '"production"' },
 }).catch(() => die('Client-Bundle fehlgeschlagen.'));
 const clientJs = clientResult.outputFiles[0].text;
+
+// ── 2b) PROJ-8-Daten: Original-Screenshots + Sektionsplan + Begründungen ────
+const CAPTURE = path.join(WS, 'capture');
+let sharp = null;
+try { sharp = (await import('sharp')).default; }
+catch { sharp = null; }
+
+async function imageDataUri(file, viewport) {
+  if (!fs.existsSync(file)) return null;
+  const ext = path.extname(file).toLowerCase();
+  const fallbackMime = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : ext === '.webp' ? 'image/webp' : 'image/png';
+  if (sharp) {
+    try {
+      const buf = await sharp(file)
+        .resize({ width: viewport, withoutEnlargement: true })
+        .webp({ quality: 76, effort: 4 })
+        .toBuffer();
+      return `data:image/webp;base64,${buf.toString('base64')}`;
+    } catch (e) {
+      console.warn(`⚠ Screenshot-Kompression fehlgeschlagen (${path.basename(file)}): ${String(e).slice(0, 160)} — Original wird eingebettet.`);
+    }
+  }
+  return `data:${fallbackMime};base64,${fs.readFileSync(file).toString('base64')}`;
+}
+
+const sectionsRaw = readJson(path.join(CAPTURE, 'sections.json'), {});
+const sectionsFor = (viewport) => {
+  if (Array.isArray(sectionsRaw)) return sectionsRaw;
+  return sectionsRaw[String(viewport)] || sectionsRaw[viewport] || sectionsRaw.viewports?.[String(viewport)] || sectionsRaw.viewports?.[viewport] || [];
+};
+const normalizeSection = (s, i) => ({
+  id: String(s.id || s.section_id || `section-${i + 1}`),
+  label: String(s.label || s.title || s.name || s.id || `Abschnitt ${i + 1}`),
+  y: Math.max(0, Number(s.y ?? s.top ?? s.start ?? s.start_y ?? 0) || 0),
+  height: Math.max(1, Number(s.height ?? ((s.bottom ?? s.end ?? s.end_y ?? 0) - (s.y ?? s.top ?? s.start ?? s.start_y ?? 0))) || 1),
+});
+const compareRaw = readJson(path.join(RD, 'compare.json'), { sections: [] });
+const compareSections = (compareRaw.sections || []).map((s, i) => ({
+  id: String(s.id || s.section_id || `section-${i + 1}`),
+  original: s.original == null ? null : String(s.original),
+  change: String(s.change || s.reason || s.begruendung || ''),
+}));
+const originalShots = [];
+for (const viewport of [375, 768, 1440]) {
+  const image = await imageDataUri(path.join(CAPTURE, `shot-${viewport}.png`), viewport);
+  if (!image) continue;
+  originalShots.push({
+    viewport,
+    image,
+    sections: sectionsFor(viewport).map(normalizeSection),
+  });
+}
+const proj8Data = {
+  run_id: meta.run_id,
+  domain: meta.domain,
+  variants: { safe: Boolean(prerendered.safe), bold: Boolean(prerendered.bold) },
+  original: originalShots,
+  compare: compareSections,
+};
+const fallbackShot = originalShots.find((s) => s.viewport === 1440) || originalShots[0];
+const proj8Fallback = fallbackShot ? `
+<section class="shell-proj8-fallback" aria-label="Statischer Vorher-Nachher-Vergleich">
+  <h2>Vorher / Nachher</h2>
+  <figure>
+    <figcaption>Vorher: Original-Screenshot (${fallbackShot.viewport}px)</figcaption>
+    <img src="${fallbackShot.image}" alt="Original-Screenshot von ${esc(meta.domain)}" loading="lazy">
+  </figure>
+  <figure>
+    <figcaption>Nachher: Redesign-Vorschlag Safe</figcaption>
+    <div class="shell-proj8-fallback-after">${prerendered.safe || ''}</div>
+  </figure>
+</section>` : '';
 
 // ── 3) Tailwind-CSS (Theme-Tokens + Varianten-Klassen) ──────────────────────
 // Quellen explizit (source(none) + @source): nur redesign/ + Shell-Template,
@@ -150,8 +227,34 @@ const fontsTag = families.length
   ? `<link rel="stylesheet" href="https://fonts.bunny.net/css2?${families.map((f) => `family=${encodeURIComponent(f).replace(/%20/g, '+')}:wght@400;500;600;700`).join('&')}&display=swap">`
   : '';
 
+// ── 4b) PROJ-20: gefüllte Bild-Slots (background-image + a11y) ──────────────
+// Guard: greift NUR, wenn images-fill.json (PROJ-20) existiert. Ohne Füllung
+// bleibt der Build byte-identisch zu vorher.
+let slotCss = '';
+let slotAriaJs = '';
+const imagesFill = readJson(path.join(RD, 'images-fill.json'), null);
+if (imagesFill && Array.isArray(imagesFill.slots)) {
+  const filled = imagesFill.slots.filter((s) => s && s.source && s.source !== 'placeholder' && s.file);
+  const ariaMap = {};
+  const rules = [];
+  for (const s of filled) {
+    const uri = await imageDataUri(path.join(RD, s.file), 1600);
+    if (!uri) continue;
+    const id = String(s.slot_id).replace(/["\\]/g, '');
+    rules.push(`[data-image-slot="${id}"]{background-image:url("${uri}");background-size:cover;background-position:center;background-repeat:no-repeat}`);
+    const label = (s.attribution && s.attribution.alt) || s.prompt || '';
+    if (label) ariaMap[id] = String(label).slice(0, 200);
+  }
+  slotCss = rules.join('\n');
+  if (Object.keys(ariaMap).length) {
+    slotAriaJs = `\n;(function(){try{var M=${JSON.stringify(ariaMap)};function ap(){document.querySelectorAll('[data-image-slot]').forEach(function(el){var id=el.getAttribute('data-image-slot');if(M[id]&&!el.getAttribute('aria-label')){el.setAttribute('role','img');el.setAttribute('aria-label',M[id]);}});}if(document.body){new MutationObserver(ap).observe(document.body,{childList:true,subtree:true});}ap();}catch(e){}})();`;
+  }
+  if (filled.length) console.log(`  · PROJ-20: ${rules.length}/${filled.length} Bild-Slot(s) eingebettet.`);
+}
+const cssAll = slotCss ? `${css}\n${slotCss}` : css;
+const jsAll = slotAriaJs ? clientJs + slotAriaJs : clientJs;
+
 // ── 5) Assemble ─────────────────────────────────────────────────────────────
-const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 const fill = (tpl, marker, value) => tpl.split(`<!--UICHECK:${marker}-->`).join(value);
 
 let html = fs.readFileSync(path.join(SHELL, 'template.html'), 'utf8');
@@ -161,8 +264,10 @@ html = fill(html, 'DOMAIN', esc(meta.domain));
 html = fill(html, 'RUN_ID', esc(meta.run_id));
 html = fill(html, 'FAVICON', favicon);
 html = fill(html, 'FONTS', fontsTag);
-html = fill(html, 'CSS', css.split('</style').join('<\\2f style'));
-html = fill(html, 'JS', clientJs.split('</script').join('<\\/script'));
+html = fill(html, 'CSS', cssAll.split('</style').join('<\\2f style'));
+html = fill(html, 'JS', jsAll.split('</script').join('<\\/script'));
+html = fill(html, 'PROJ8_DATA', JSON.stringify(proj8Data).split('</script').join('<\\/script'));
+html = fill(html, 'PROJ8_FALLBACK', proj8Fallback);
 html = fill(html, 'SAFE_HTML', prerendered.safe || '');
 html = fill(html, 'BOLD_HTML', prerendered.bold || '');
 

@@ -39,10 +39,20 @@ assert_gate() { # $1=gates.json $2=gate-id $3=erwarteter status
 mk_run() { # $1 = Run-Ordner
   local r="$1" rd="$1/redesign"
   mkdir -p "$rd/shared" "$rd/safe/sections" "$rd/bold/sections"
+  mkdir -p "$r/capture"
 
   jq -n '{url:"https://example.de", final_url:"https://example.de/", status:"ok"}' > "$r/meta.json"
   jq -n '{url:"https://example.de", final_url:"https://example.de/"}' > "$r/ui-check.json"
   jq -n '{run_id:"test", phases:{}}' > "$r/status.json"
+  local png='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII='
+  for vw in 375 768 1440; do
+    printf '%s' "$png" | base64 -d > "$r/capture/shot-$vw.png"
+  done
+  jq -n '{
+    "375":[{id:"hero",label:"Hero",y:0,height:180},{id:"kontakt",label:"Kontakt",y:180,height:160}],
+    "768":[{id:"hero",label:"Hero",y:0,height:220},{id:"kontakt",label:"Kontakt",y:220,height:180}],
+    "1440":[{id:"hero",label:"Hero",y:0,height:260},{id:"kontakt",label:"Kontakt",y:260,height:220}]
+  }' > "$r/capture/sections.json"
 
   jq -n '{color:{palette:[{value:"#0d9488"}]},
           font:{"display+text":{"$type":"fontFamily","$value":["Inter","system-ui","sans-serif"]}}}' \
@@ -212,6 +222,10 @@ title="Redesign-Vorschlag — example.de"
   printf '<script>document.documentElement.classList.replace("no-js","js")</script>\n'
   printf '<main><section class="shell-variant" data-variant="safe"><div id="mount-safe">%s</div></section>\n' "$inner_safe"
   printf '<section class="shell-variant" data-variant="bold"><div id="mount-bold">%s</div></section></main>\n' "$inner_bold"
+  printf '<section class="shell-proj8-fallback"><h2>Vorher / Nachher</h2><img src="data:image/png;base64,iVBORw0KGgo=" alt="Original-Screenshot"></section>\n'
+  printf '<div data-vote-variant="safe">Welche Richtung gefällt Ihnen?</div><div data-vote-variant="bold"></div>\n'
+  printf '<div data-split></div><button data-viewport-tab="375">375</button><button data-viewport-tab="768">768</button><button data-viewport-tab="1440">1440</button>\n'
+  printf '<button>Antwort kopieren</button><textarea class="shell-copy-text">Gewählte Richtung: Safe</textarea>\n'
   printf '<script>\nvar BUNDLE_MIT_TODO_IM_CODE=1; // TODO-Marker im Bundle darf NICHT feuern\n</script>\n</body>\n</html>\n'
   [[ "$mode" == "big" ]] && { printf '<!-- '; head -c $((5 * 1024 * 1024)) /dev/zero | tr '\0' 'A'; printf ' -->\n'; }
 } > "$ws/out/mockup.html"
@@ -252,7 +266,7 @@ assert_eq "$rc" 0 "Voller Export → Exit 0"
 [[ -s "$R/mockup/gates.json" ]] && ok "gates.json geschrieben" || bad "gates.json fehlt"
 [[ -s "$R/mockup/build.log" ]] || bad "build.log fehlt"
 assert_eq "$(jq -r '.summary.fail' "$R/mockup/gates.json")" 0 "gates.json: 0 rote Gates"
-for g in M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11; do assert_gate "$R/mockup/gates.json" "$g" ok; done
+for g in M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17; do assert_gate "$R/mockup/gates.json" "$g" ok; done
 assert_eq "$(jq -r '.phases.mockup.status' "$R/status.json")" "ok" "status.json phases.mockup"
 
 run_export "$R"; assert_eq "$?" 2 "Erneuter Export ohne --force → Exit 2"
@@ -284,6 +298,25 @@ STUB_AB_MOUNTED='{"safe":true,"bold":false}' run_export "$R"
 assert_eq "$?" 1 "JS-Mount unvollständig → Exit 1 (Warnung M11)"
 assert_gate "$R/mockup/gates.json" M11 warn
 
+R="$WORK/r-nosections"; mk_run "$R"; rm "$R/capture/sections.json"
+run_export "$R"
+assert_eq "$?" 1 "Fehlende sections.json → Exit 1 (Warnung M17)"
+assert_gate "$R/mockup/gates.json" M17 warn
+
+R="$WORK/r-nocapture"; mk_run "$R"; rm -rf "$R/capture"
+run_export "$R"
+assert_eq "$?" 1 "Fehlende Capture-Screenshots → Exit 1 (Warnungen)"
+assert_gate "$R/mockup/gates.json" M14 warn
+assert_gate "$R/mockup/gates.json" M15 warn
+assert_gate "$R/mockup/gates.json" M16 warn
+assert_gate "$R/mockup/gates.json" M17 warn
+
+R="$WORK/r-badcompare"; mk_run "$R"
+jq '.sections[0].change = ""' "$R/redesign/compare.json" > "$R/redesign/c.json" && mv "$R/redesign/c.json" "$R/redesign/compare.json"
+run_export "$R"
+assert_eq "$?" 2 "Fehlende Vergleichs-Begründung → Exit 2"
+assert_gate "$R/mockup/gates.json" M13 fail
+
 echo "── Browser-Gates ──"
 R="$WORK/r-hscroll"; mk_run "$R"
 STUB_AB_SW=420 run_export "$R"
@@ -303,9 +336,34 @@ if [[ "${MOCKUP_EXPORT_E2E:-0}" == "1" ]]; then
   assert_eq "$rc" 0 "E2E-Export → Exit 0"
   [[ -s "$R/mockup.html" ]] && ok "E2E: mockup.html vorhanden ($(stat -c %s "$R/mockup.html") Bytes)" || bad "E2E: mockup.html fehlt"
   grep -q "Termin buchen" "$R/mockup.html" && ok "E2E: CTA im statischen HTML" || bad "E2E: CTA fehlt im HTML"
+  grep -q "Welche Richtung gefällt Ihnen" "$R/mockup.html" && ok "E2E: Voting-Screen im Bundle" || bad "E2E: Voting-Screen fehlt"
+  grep -q "shell-proj8-fallback" "$R/mockup.html" && ok "E2E: No-JS-Fallback Vorher/Nachher" || bad "E2E: PROJ-8-Fallback fehlt"
   grep -q "fonts.bunny.net" "$R/mockup.html" && ok "E2E: Bunny-Fonts-Link" || bad "E2E: Bunny-Fonts-Link fehlt"
   ! grep -qE 'fonts\.(googleapis|gstatic)\.com' "$R/mockup.html" && ok "E2E: kein Google-CDN" || bad "E2E: Google-CDN gefunden"
   cat "$WORK/e2e-stdout.log"
+
+  # ── PROJ-20: gefüllten Bild-Slot einbetten und Einbettung verifizieren (BUG-2) ──
+  echo "── E2E: PROJ-20 Bild-Slot-Einbettung ──"
+  png20='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII='
+  mkdir -p "$R/redesign/assets"
+  printf '%s' "$png20" | base64 -d > "$R/redesign/assets/hero-bild.png"
+  jq -n '{run_id:"e2e", generated_at:"t", threshold:70, judge:"heuristic",
+    sources_available:{stock:true, website:false, generation:null},
+    slots:[{slot_id:"hero-bild", used_in:["safe","bold"], prompt:"Dachdecker bei der Arbeit auf einem Ziegeldach",
+      target:{width:1600,height:900}, source:"stock:pexels", license:"Pexels License",
+      attribution:{photographer:"E2E Tester"}, judge_score:90, file:"assets/hero-bild.png",
+      width:1600, height:900, bytes:100}],
+    counts:{filled:1, placeholder:0, by_source:{"stock:pexels":1}}, notes:[]}' > "$R/redesign/images-fill.json"
+  "$ME" --force "$R" > "$WORK/e2e-p20.log" 2>&1; rc=$?
+  assert_eq "$rc" 0 "E2E+PROJ-20: Export → Exit 0"
+  grep -qF 'data-image-slot="hero-bild"]{background-image:url("data:image/' "$R/mockup.html" \
+    && ok "E2E+PROJ-20: Slot-Bild als base64-background-image eingebettet" \
+    || bad "E2E+PROJ-20: Slot-background-image fehlt im HTML"
+  grep -q "Dachdecker bei der Arbeit" "$R/mockup.html" \
+    && ok "E2E+PROJ-20: aria-label aus Prompt eingebettet" || bad "E2E+PROJ-20: aria-label fehlt"
+  if grep -oE '(src|url\()\s*=?\s*["'\'']?https?://[^"'\'' )]+\.(jpe?g|png|webp|gif|avif)' "$R/mockup.html" | grep -qv 'fonts\.bunny\.net'; then
+    bad "E2E+PROJ-20: externe Bild-URL im finalen HTML (DSGVO)"; else ok "E2E+PROJ-20: keine externen Bild-Requests (DSGVO)"; fi
+  cat "$WORK/e2e-p20.log"
 fi
 
 # ── Summary ─────────────────────────────────────────────────────────────────

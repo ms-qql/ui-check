@@ -295,6 +295,24 @@ scripts/ui-check.sh --finalize <run-dir> [--industry <tag>] [--weights v,s,p,a,c
 - `--desktop` — zusätzlicher Lighthouse-Desktop-Lauf.
 - `--out` / `--timeout` — Run-Ordner erzwingen bzw. Preflight-/Ladezeit.
 
+#### `ui-check-auto.sh` — End-to-End für Jupiter (Collect → Judge → Finalize)
+
+`ui-check.sh` pausiert bewusst bei `awaiting_judge` (der Judge ist Claude). Im
+Terminal macht Claude den Judge-Pass selbst; **headless (Jupiter/PROJ-14)** übernimmt
+das `ui-check-auto.sh`: es ruft Collect auf, löst den Judge-Pass über einen headless
+`claude -p`-Lauf aus (schreibt `judge.json`) und ruft dann `--finalize`. Ohne diesen
+Treiber blieben Jupiter-Läufe dauerhaft auf `awaiting_judge` (UI: „Läuft") stehen.
+
+```
+scripts/ui-check-auto.sh <url> [<ui-check.sh-Optionen>] [--judge-model <modell>] [--no-judge]
+```
+
+- `--judge-model <modell>` — Modell für den Judge-Lauf (Default `sonnet`).
+- `--no-judge` — Collect ausführen, dann bei `awaiting_judge` stehen bleiben (manueller Judge-Pass).
+- Zusätzlicher Exit-Code **3**: Judge-Pass fehlgeschlagen → `status: error` (kein stiller Hänger).
+- Testhaken: `UI_CHECK_JUDGE_CMD` (Ersatz-Judge), `UI_CHECK_SH`, `CLAUDE_BIN`,
+  `UI_CHECK_JUDGE_MODEL`, `UI_CHECK_JUDGE_TIMEOUT`.
+
 ### Ausgabe (Run-Ordner-Kontrakt, zusätzlich zu PROJ-1–4)
 
 ```
@@ -310,6 +328,7 @@ scripts/ui-check.sh --finalize <run-dir> [--industry <tag>] [--weights v,s,p,a,c
 | Schritt | Fehler | Verhalten |
 |---|---|---|
 | Capture | Exit ≠ 0 | **Abbruch** des Laufs (`status: aborted`, Exit 2) — nichts zu bewerten. |
+| Inhalts-Gate | `content_suspicion=spa_empty` (leere/Wartungs-/nicht-gerenderte Seite) | **Abbruch** (`status: aborted`, Exit 2) — kein bewertbarer Inhalt, verhindert Hänger am Judge-Pausenpunkt. |
 | Lighthouse | Exit ≠ 0 / `status: failed` | degradieren: Perf/A11y „nicht messbar", renormiert (Exit 1). |
 | Branding | Exit ≠ 0 | degradieren: Vermerk, Lauf läuft weiter (Exit 1). |
 | Scoring | score-report Exit 1 / 2 | Exit 1 (degradiert) bzw. Exit 2 (Gate) durchgereicht. |
@@ -397,6 +416,7 @@ scripts/redesign.sh --verify <run-dir>
 | G11 | ein CTA-Label pro `intent` (ganze Seite) | ✓ |
 | G12 | Zigzag-Cap: max. 2 × `split`-Layout in Folge, je Variante | ✓ |
 | G13 | npm-Dependency-Whitelist | nur Warnung |
+| G14 | deutsche Copy/Reports nutzen echte Umlaute statt ASCII-Umschreibungen | ✓ |
 
 ### Exit-Codes
 
@@ -418,7 +438,7 @@ scripts/redesign.sh --verify <run-dir>
 - **Buildbarkeit** prüft bewusst erst PROJ-7 (Mockup-Export-Build) — hier
   nur statisch prüfbare Kontrakte.
 - **Testbarkeit:** `scripts/tests/redesign_test.sh` — hermetische Suite
-  (46 Assertions) mit Fixture-Läufen, ohne Browser/Netz/Claude.
+  (49 Assertions) mit Fixture-Läufen, ohne Browser/Netz/Claude.
 
 ## `mockup-export.sh` — Self-contained Mockup-HTML (PROJ-7, Stufe 2)
 
@@ -459,6 +479,12 @@ scripts/mockup-export.sh <run-dir> [--force]
 | M9 | Dateigröße < 5 MB | gelb, Exit 1, Promote trotzdem |
 | M10 | kein horizontales Scrollen bei 375 px | rot, Exit 2 |
 | M11 | interaktive Ansicht mountet beide Varianten | gelb, Exit 1 |
+| M12 | PROJ-8 Voting-Screen vorhanden | rot, Exit 2 |
+| M13 | `redesign/compare.json` enthält Begründungen je Vergleichs-Sektion | rot, Exit 2 |
+| M14 | Split-Slider für Original-Screenshots 375/768/1440 vorhanden | rot, Exit 2; gelb bei fehlenden/teilweisen Capture-Screenshots |
+| M15 | „Antwort kopieren" liefert strukturierten Text | rot, Exit 2; gelb ohne Capture-Screenshots |
+| M16 | No-JS-Fallback für Vorher/Nachher sichtbar | rot, Exit 2; gelb ohne Capture-Screenshots |
+| M17 | `capture/sections.json` für Sektionsvergleich verfügbar | gelb, Exit 1 |
 
 ### Verhalten
 
@@ -472,6 +498,77 @@ scripts/mockup-export.sh <run-dir> [--force]
 - **Testbarkeit:** `scripts/tests/mockup_export_test.sh` — hermetische Suite mit
   Build- und Browser-Stubs; `MOCKUP_EXPORT_E2E=1` schaltet den echten npm/Browser-Build
   gegen Fixture-Varianten dazu.
+- **QA-Stand 2026-07-03:** hermetische Suite **68/68 grün**; echter
+  `MOCKUP_EXPORT_E2E=1`-Build **70/70 grün**. Regression abgedeckt: fehlende
+  Capture-Screenshots degradieren M14-M17 gelb und blockieren den Export nicht mehr
+  mit roten PROJ-8-Browser-Gates.
+
+## `after-score.sh` — Nachher-Scoring / Score-Delta (PROJ-9, Stufe 2)
+
+Deterministischer Gate-Schritt nach PROJ-7. Das Skript bewertet nicht selbst per LLM,
+sondern konsumiert frische Nachher-Judge-Dateien für Safe/Bold, normalisiert sie mit
+derselben Rubrik-Version wie PROJ-4 und entscheidet, welche Variante ausgeliefert wird.
+Performance/Lighthouse wird für lokale Mockups bewusst als nicht vergleichbar markiert
+und aus dem Delta renormiert.
+
+```bash
+scripts/after-score.sh <run-dir> [--judge-safe <file>] [--judge-bold <file>]
+                           [--retry-safe <file>] [--retry-bold <file>]
+                           [--retry-cmd <executable>] [--threshold 15] [--force]
+```
+
+- `<run-dir>` — Run mit `scores.json`, `report.md` und `mockup.html`.
+- `--judge-safe` / `--judge-bold` — frische Judge-Ausgaben für die Varianten.
+  Defaults: `<run-dir>/after-judge-safe.json` und `<run-dir>/after-judge-bold.json`.
+- `--retry-safe` / `--retry-bold` — optionale Judge-Ausgaben nach einem Retry.
+  Defaults: `<run-dir>/after-judge-safe-retry.json` und
+  `<run-dir>/after-judge-bold-retry.json`.
+- `--retry-cmd` — optionaler automatischer Retry-Hook. Wird eine Variante initial
+  nicht ausgeliefert und existiert noch keine Retry-Judge-Datei, ruft das Skript
+  `<executable> <variant> <run-dir> <retry-brief> <retry-judge-out>` auf. Das
+  Kommando muss genau eine Retry-Judge-Datei schreiben; es wird kein `eval` genutzt.
+  Alternativ kann `AFTER_SCORE_RETRY_CMD` gesetzt werden.
+- `--threshold` — erforderliches Delta zum renormierten Originalscore, Default `15`.
+- `--force` — bestehendes `after-scoring.json` überschreiben.
+
+### Ausgabe (Run-Ordner-Kontrakt)
+
+```
+<run-dir>/scores-safe.json       Nachher-Score Safe inkl. Gate-Status
+<run-dir>/scores-bold.json       Nachher-Score Bold inkl. Gate-Status
+<run-dir>/after-scoring.json     Zusammenfassung, Gewinner, lieferbare Varianten
+<run-dir>/after-score/
+├── safe-first.json              initialer Safe-Versuch
+├── bold-first.json              initialer Bold-Versuch
+├── retry-safe.md                Feedback-Brief, falls Safe initial scheitert
+└── retry-bold.md                Feedback-Brief, falls Bold initial scheitert
+```
+
+Zusätzlich werden `report.md` und `mockup.html` idempotent mit einem
+`Nachher-Scoring`-Abschnitt bzw. Score-Delta-Badge angereichert. Existiert
+`status.json`, wird `phases.after_scoring` für Jupiter/PROJ-14 fortgeschrieben.
+
+### Exit-Codes
+
+| Code | Bedeutung |
+|---|---|
+| `0` | mindestens eine Variante besteht das Delta-Gate |
+| `1` | beide Varianten scheitern; Audit-only-Ergebnis + Fehlerbericht erzeugt |
+| `2` | Input-Gate/intern: fehlende Pflichtdatei, ungültiges JSON, Rubrik-Version-Konflikt |
+
+### Judge-Ausgabe-Kontrakt
+
+Gleicher Kernvertrag wie PROJ-4: `rubric_version`, `visual.score`, `ki_score`,
+`accessibility.score` (oder `a11y.score`) und
+`conversion.{clarity,credibility,logic,action,emotion}`. Die Accessibility-Dimension
+ist Pflicht, weil PROJ-9 den Vergleich über die vier nicht-Performance-Dimensionen
+renormiert. Findings werden nur übernommen, wenn sie Beleg und Fundort enthalten.
+
+### Testbarkeit
+
+`scripts/tests/after_score_test.sh` prüft Happy Path, Gate-Fail, Retry, Audit-only,
+Rubrik-Konflikt, Mockup-/Report-Anreicherung und `status.json` hermetisch ohne Browser
+oder LLM.
 
 ## Voraussetzungen
 

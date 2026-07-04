@@ -67,6 +67,29 @@ Motion-Hooks (`useScroll`, `useMotionValue`, `useTransform`) verwenden.
   über Italic/Bold derselben Familie — keine Fremd-Serif als Schmuckwort.
 - Fonts via Bunny Fonts oder self-hosted — nie Google-Fonts-CDN (Gate).
 
+## Dynamik / Ambient (Default) + Glass
+
+Alle Effekte **token-only** (`color-mix` aus `--color-primary`/`--color-surface`),
+**assetfrei** (kein neues Bild), reduced-motion abgeschaltet.
+
+- **Ambient + Mesh** (`effects/Ambient`, CSS statt WebGL): driftender Token-Verlauf;
+  `mesh` fügt einen langsam rotierenden Conic-Layer hinzu (max. 1 Sektion, i. d. R.
+  Hero). Statt `@paper-design/shaders-react` reicht der CSS-Mesh — robuster im
+  Offline-Bundle; die Dependency nur nehmen, wenn wirklich WebGL nötig ist.
+- **Thematische Silhouette** (`effects/Skyline`, Inline-SVG, `currentColor` +
+  `text-surface/10`): dezente, marken-/branchenpassende Form im Hero (hier
+  Gebäude). Für andere Branchen ein neutrales Pendant — nie ein Fremd-Motiv.
+- **Spotlight-Cards** (`effects/Spotlight`, CSS `--mx/--my`): Token-Glow folgt dem
+  Cursor — Interaktion, keine Dauerbewegung.
+- **Parallax** (`effects/Parallax`, Motion `useScroll`): Bild-Slots/Formen bewegen
+  sich minimal gegen den Scroll. **Ken-Burns** (`uic-kenburns`) für echte Fotos.
+- **Glass — erlaubt, aber diszipliniert:** nur **funktional begründet** (etwas liegt
+  sichtbar über etwas: sticky Nav, ein Panel über Hero/Color-Shift), **nur Token-
+  Farben** (Navy-Glas: `bg-surface/10 backdrop-blur-md border-surface/25`), **max.
+  1–2 Flächen**, Kontrast/Lesbarkeit gewahrt. **Verboten** (= KI-Slop): Glas ohne
+  Grund, Glas über bunten/Fremdfarben-Blobs, flächendeckendes Glassmorphism.
+  Kein Glas in Safe.
+
 ## Anti-Slop (Pflicht, Auswahl mechanisch per Gate geprüft)
 
 - Ein CTA-Label pro Absicht; primärer CTA ≤ 3 Wörter, einzeilig (Gates).
@@ -81,8 +104,15 @@ Motion-Hooks (`useScroll`, `useMotionValue`, `useTransform`) verwenden.
 
 - Wie Safe: shadcn/ui-Vendoring + portierte Effekt-Komponenten unter
   `<variante>/components/` (Effekte unter `components/effects/`).
+- **`cn()` Pflicht mit `tailwind-merge`** (`twMerge(clsx(inputs))`, Deps `clsx` +
+  `tailwind-merge`) — Farb-Overrides (z. B. heller CTA auf dunklem Hero) müssen
+  Konflikte deterministisch auflösen, sonst weiß-auf-weiß. Vorder- und
+  Hintergrundfarbe bei Overrides immer gemeinsam setzen.
 - Framework-agnostisches Client-React (kein `next/*`); Motion aus
   `motion/react`; interaktive Effekte als isolierte Leaf-Komponenten.
+- **Motion-Startzustände** (`initial`/`whileInView` mit opacity 0) sind erlaubt —
+  der Mockup-Export macht statische Klone (Vorschau/Vorher-Nachher) über die
+  Shell wieder sichtbar; keine Extra-Vorkehrung im Varianten-Code nötig.
 - Bild-Slots wie Safe (`data-image-slot`, `images.md`-Pflicht) — Bold darf
   Slots großflächiger inszenieren (Masken, Parallax), erfindet aber keine
   zusätzlichen Bilder ohne Slot.

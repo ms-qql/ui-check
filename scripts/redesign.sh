@@ -283,7 +283,7 @@ done
 
 # ── G6: Token-Lint (Farben nur aus Tokens bzw. tokens-extra.json) ───────────
 SRC_GLOB=(-name '*.jsx' -o -name '*.tsx' -o -name '*.js' -o -name '*.ts' -o -name '*.css' -o -name '*.html')
-list_src() { find "$RD/safe" "$RD/bold" -type f \( "${SRC_GLOB[@]}" \) 2>/dev/null; }
+list_src() { find "$RD/safe" "$RD/bold" -path '*/node_modules/*' -prune -o -type f \( "${SRC_GLOB[@]}" \) -print 2>/dev/null; }
 
 allowed="$( { grep -hoE '#[0-9a-fA-F]{3,8}' "$RD/shared/tailwind-theme.css" "$RD/shared/tokens.json" 2>/dev/null;
               jq -r '.colors[]?.value // empty' "$RD/shared/tokens-extra.json" 2>/dev/null;
@@ -303,7 +303,8 @@ rgb_lit="$(list_src | xargs -r grep -lE '(rgba?|hsla?)\(\s*[0-9]' 2>/dev/null | 
 [[ -z "$rgb_lit" ]] || gate G6b warn "rgb()/hsl()-Literale gefunden" "$(echo "$rgb_lit" | xargs -r -n1 basename | paste -sd' ') — Token-Variablen bevorzugen"
 
 # ── G7: kein Google-Fonts-CDN (DSGVO) ───────────────────────────────────────
-gf="$(grep -rlE 'fonts\.(googleapis|gstatic)\.com' "$RD" 2>/dev/null | head -3)"
+gf="$(find "$RD" -path '*/node_modules/*' -prune -o -type f -print 2>/dev/null \
+  | xargs -r grep -lE 'fonts\.(googleapis|gstatic)\.com' 2>/dev/null | head -3)"
 if [[ -z "$gf" ]]; then
   gate G7 ok "Kein Google-Fonts-CDN (DSGVO)"
 else
@@ -311,7 +312,8 @@ else
 fi
 
 # ── G8: keine Lorem-/TODO-Reste ─────────────────────────────────────────────
-lorem="$(grep -rniE 'lorem ipsum|\bTODO\b|\bFIXME\b|\bTBD\b' "$RD" 2>/dev/null \
+lorem="$(find "$RD" -path '*/node_modules/*' -prune -o -type f -print 2>/dev/null \
+         | xargs -r grep -niE 'lorem ipsum|\bTODO\b|\bFIXME\b|\bTBD\b' 2>/dev/null \
          | grep -v 'redesign-context.json\|verify.json' | head -3)"
 if [[ -z "$lorem" ]]; then
   gate G8 ok "Keine Lorem-/TODO-Platzhalter-Reste"
@@ -401,6 +403,23 @@ for v in safe bold; do
     | paste -sd' ')"
   [[ -z "$extra" ]] || gate "G13-$v" warn "Unerwartete Dependencies ($v)" "$extra — prüfen, ob fürs Bundle (PROJ-7) nötig"
 done
+
+# ── G14: deutsche Umlaute statt ASCII-Umschreibungen ────────────────────────
+umlaut_files="$(
+  find "$RD" -type f \
+    \( -name '*.md' -o -name '*.json' -o -name '*.jsx' -o -name '*.tsx' -o -name '*.js' -o -name '*.ts' \) \
+    ! -path '*/node_modules/*' ! -name 'package-lock.json' ! -name 'verify.json' 2>/dev/null
+)"
+umlaut_hits="$(
+  printf '%s\n' "$umlaut_files" \
+    | xargs -r grep -nE '\b[A-Za-z]*(Loesung|Loesungen|fuer|Fuer|ueber|Ueber|naechst|Erstgespraech|Einschaetzung|glaubwuerdig|gleichfoermig|Saeulen|primaer|Flaeche|Flaechen|Weiss|zusaetzlich|unnoetig|mittelstaendisch|enthaelt|Uebergabe|hoeren)[A-Za-z]*\b' 2>/dev/null \
+    | head -5
+)"
+if [[ -z "$umlaut_hits" ]]; then
+  gate G14 ok "Deutsche Umlaute korrekt (keine ae/oe/ue-Umschreibungen in Copy)"
+else
+  gate G14 fail "ASCII-Umschreibungen statt Umlauten gefunden" "$(echo "$umlaut_hits" | sed "s#$RD/##" | cut -c1-220 | paste -sd' · ')"
+fi
 
 # ── Ergebnis ────────────────────────────────────────────────────────────────
 summary="$(jq -s '{ok: map(select(.status=="ok"))|length,

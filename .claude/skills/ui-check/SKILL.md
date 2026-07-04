@@ -69,6 +69,11 @@ Nutzer als „(auto)" aus.
 Bewerte die erfasste Seite **selbst** gegen die drei Rubriken. **Lies zuerst**
 `rubrics/VERSION`, `rubrics/visual.md`, `rubrics/slop.md`, `rubrics/conversion.md`
 (die Anker-Bänder sind bindend — streng zuordnen, nicht glätten).
+Alle deutschen Report- und Artefakttexte müssen echte deutsche Umlaute verwenden
+(`ä`, `ö`, `ü`, `Ä`, `Ö`, `Ü`, `ß`) und keine ASCII-Umschreibungen wie
+`fuer`, `ueber`, `Loesung`, `naechste`, `Erstgespraech` oder `Einschaetzung`,
+sofern es sich nicht um technische Identifier, URLs, Dateinamen oder fremde
+Eigennamen handelt.
 
 **Inputs für die Bewertung:**
 - `<run-dir>/capture/shot-375.png`, `shot-768.png`, `shot-1440.png` — die drei Screenshots (visuell, slop, conversion).
@@ -120,6 +125,13 @@ Stufe 2 (`/abc-frontend` bzw. PROJ-6 Redesign), falls der Nutzer weitermöchte.
 Bei vollständigen Parametern **keine Rückfragen** stellen. Der ganze Ablauf ist
 über die zwei Treiber-Aufrufe + einen Judge-Pass skriptbar; `status.json` ist die
 Fortschrittsquelle, die Exit-Codes (0/1/2) steuern den aufrufenden Prozess.
+
+Für den **vollautomatischen** headless-Lauf (Jupiter/PROJ-14) verkettet
+`scripts/ui-check-auto.sh` die drei Stufen in einem Prozess: Collect →
+Judge-Pass (headless `claude -p` erzeugt `judge.json`) → `--finalize`. Scheitert
+der Judge-Pass, wird `status: error` gesetzt (Exit 3) — der Lauf bleibt nicht
+still auf `awaiting_judge` hängen. Leere/Wartungsseiten brechen bereits im Collect
+ab (`content_suspicion=spa_empty` → `status: aborted`, Exit 2).
 
 ## Fehlerbehandlung (Kurz)
 

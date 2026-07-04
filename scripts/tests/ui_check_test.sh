@@ -47,7 +47,10 @@ if [[ "${STUB_CAPTURE_RC:-0}" -ne 0 ]]; then
   jq -n --arg u "$url" '{url:$u,final_url:$u,status:"aborted",error:"Stub-Capture-Abbruch"}' > "$out/meta.json"
   echo "STUB capture: Abbruch" >&2; exit "${STUB_CAPTURE_RC}"
 fi
-jq -n --arg u "$url" '{url:$u,final_url:($u+"/"),status:"ok",content_suspicion:null}' > "$out/meta.json"
+jq -n --arg u "$url" --arg s "${STUB_CAPTURE_SUSPICION:-}" \
+  '{url:$u,final_url:($u+"/"),status:"ok",
+    content_suspicion:($s|if .=="" then null else . end),
+    notes:($s|if .=="" then [] else ["Sehr wenig sichtbarer Textinhalt (28 Zeichen) — SPA ohne SSR? content_suspicion=\(.)"] end)}' > "$out/meta.json"
 echo "sleep-marker $$" ; sleep "${STUB_CAPTURE_SLEEP:-0}"
 exit 0
 EOF
@@ -204,6 +207,16 @@ echo; echo "▶ J: Argument-Gates (Exit 2)"
 RUN_ARGS=(); run >"$WORK/j1.out" 2>&1; assert_eq "$?" "2" "keine URL → Exit 2"
 RUN_ARGS=(https://ex.test --unknown-flag); run >"$WORK/j2.out" 2>&1; assert_eq "$?" "2" "unbekannte Option → Exit 2"
 RUN_ARGS=(--finalize "$WORK/does-not-exist"); run >"$WORK/j3.out" 2>&1; assert_eq "$?" "2" "Finalize auf fehlenden Ordner → Exit 2"
+
+echo; echo "▶ K: Inhalts-Gate — leere/Wartungsseite (spa_empty) ⇒ Abbruch (Exit 2)"
+RUN_ARGS=(https://ex.test --industry saas --out "$WORK/k")
+run STUB_CAPTURE_RC=0 STUB_CAPTURE_SUSPICION=spa_empty STUB_LH_RC=0 STUB_BRAND_RC=0 >"$WORK/k.out" 2>&1
+assert_eq "$?" "2" "spa_empty → Exit 2 (Abbruch)"
+assert_eq "$(jq -r '.status' "$WORK/k/status.json")" "aborted" "status = aborted"
+assert_eq "$(jq -r '.phases.capture.status' "$WORK/k/status.json")" "aborted" "Phase capture = aborted"
+assert_eq "$(jq -r '.phase' "$WORK/k/status.json")" "aborted" "phase != awaiting_judge (kein Hänger)"
+[[ ! -d "$WORK/k/branding" ]] && ok "Branding nicht gestartet (Abbruch vor Judge-Pausenpunkt)" || bad "Branding lief trotz leerer Seite"
+grep -qi "ohne bewertbaren Inhalt" "$WORK/k.out" && ok "Meldung 'ohne bewertbaren Inhalt'" || bad "Inhalts-Gate-Meldung fehlt"
 
 echo; echo "──────────────────────────────────────────"
 echo "Ergebnis: $PASS bestanden, $FAIL fehlgeschlagen"

@@ -101,6 +101,17 @@ mkdir -p "$WS/meta" "$MOCKUP_DIR" || die "Workspace nicht anlegbar: $WS"
 cp -r "$SHELL_SRC" "$WS/shell"
 mkdir -p "$WS/redesign"
 for d in shared safe bold; do cp -r "$RD/$d" "$WS/redesign/$d"; done
+for f in compare.json brief.md images.md images-fill.json; do
+  [[ -s "$RD/$f" ]] && cp "$RD/$f" "$WS/redesign/$f"
+done
+# PROJ-20: gefüllte Bild-Slots mitnehmen (nur falls images-fill lief).
+[[ -d "$RD/assets" ]] && cp -r "$RD/assets" "$WS/redesign/assets"
+if [[ -d "$RUN_DIR/capture" ]]; then
+  mkdir -p "$WS/capture"
+  for f in shot-375.png shot-768.png shot-1440.png sections.json; do
+    [[ -s "$RUN_DIR/capture/$f" ]] && cp "$RUN_DIR/capture/$f" "$WS/capture/$f"
+  done
+fi
 
 # Favicon-Quelle: extrahiertes Logo (PROJ-3), sonst deterministischer Fallback im Build.
 FAVICON_FILE="$(ls "$RUN_DIR"/branding/logo.svg "$RUN_DIR"/branding/logo.png 2>/dev/null | head -1 || true)"
@@ -210,6 +221,17 @@ todo="$(jq -r '(.safe // "") + " " + (.bold // "")' "$PRERENDERED" | grep -oE '\
 if [[ -z "$lorem" && -z "$todo" ]]; then gate M6 ok "Keine Lorem-/TODO-Platzhalter-Reste"
 else gate M6 fail "Platzhalter-Reste gefunden" "${lorem:-}${lorem:+ }${todo:-}"; fi
 
+# M6b: deutsche Umlaute statt ASCII-Umschreibungen — in der Shell-Copy (chrome.js,
+# template.html, shell.css). Die Redesign-Copy prüft bereits redesign.sh G14;
+# hier wird die Chrome-Copy des Mockup-Shells abgesichert (Regression-Schutz).
+umlaut_hits="$(
+  grep -rnE '\b[A-Za-z]*(gefaellt|waehl|Gewaehlt|Rueckmeld|Begruend|Loesung|fuer|Fuer|ueber|Ueber|naechst|groesse|Groesse|schliess|zurueck|Vorschlaege|hoeren|auswaehl)[A-Za-z]*\b' \
+    "$SHELL_SRC/chrome.js" "$SHELL_SRC/template.html" "$SHELL_SRC/shell.css" 2>/dev/null \
+    | grep -v 'https\?://' | head -5 || true
+)"
+if [[ -z "$umlaut_hits" ]]; then gate M6b ok "Deutsche Umlaute in der Shell-Copy korrekt"
+else gate M6b fail "ASCII-Umschreibungen in der Shell-Copy" "$(echo "$umlaut_hits" | sed "s#$SHELL_SRC/##" | cut -c1-200 | paste -sd' · ')"; fi
+
 # M7: No-JS-Baseline — beide Varianten vorgerendert + primärer CTA sichtbar.
 cta_label="$(jq -r '.conversion.primary_cta.label // ""' "$CONTENT")"
 m7_err=()
@@ -272,6 +294,74 @@ if ab open "file://$OUT_HTML" >/dev/null 2>&1; then
   else gate M10 fail "Horizontales Scrollen bei 375 px" "$(IFS='; '; echo "${hscroll_err[*]}")"; fi
 else
   gate M10 fail "Browser-Gate nicht ausführbar" "agent-browser konnte file://$OUT_HTML nicht öffnen"
+fi
+
+# PROJ-8: Voting, Vorher/Nachher, Sektionsvergleich und Antwort-Kopie.
+capture_count=0
+for vw in 375 768 1440; do
+  [[ -s "$RUN_DIR/capture/shot-$vw.png" ]] && capture_count=$((capture_count + 1))
+done
+has_capture=false
+has_all_capture=false
+[[ "$capture_count" -gt 0 ]] && has_capture=true
+[[ "$capture_count" -eq 3 ]] && has_all_capture=true
+
+if grep -q "Welche Richtung gefällt Ihnen" "$OUT_HTML" && grep -q "data-vote-variant" "$OUT_HTML"; then
+  gate M12 ok "Voting-Screen vorhanden"
+else
+  gate M12 fail "Voting-Screen fehlt" "Safe/Bold-Auswahl muss in mockup.html enthalten sein"
+fi
+
+if [[ -s "$RD/compare.json" ]]; then
+  cmp_missing="$(jq -r '[.sections[]? | select((.change // .reason // .begruendung // "") == "") | .id // "unbekannt"] | join(", ")' "$RD/compare.json")"
+  if [[ -z "$cmp_missing" ]]; then
+    gate M13 ok "Alle Vergleichs-Sektionen haben eine Begründung"
+  else
+    gate M13 fail "Vergleichs-Begründungen fehlen" "$cmp_missing"
+  fi
+else
+  gate M13 fail "compare.json fehlt" "redesign/compare.json ist PROJ-8-Pflichtinput"
+fi
+
+if [[ "$has_capture" == true ]]; then
+  if grep -q 'class="shell-proj8-fallback"' "$OUT_HTML" && grep -q 'Original-Screenshot' "$OUT_HTML"; then
+    gate M16 ok "No-JS-Fallback für Vorher/Nachher vorhanden"
+  else
+    gate M16 fail "No-JS-Fallback für Vorher/Nachher fehlt" "statische Original-/Redesign-Ansicht muss im HTML sichtbar sein"
+  fi
+  if [[ -s "$RUN_DIR/capture/sections.json" ]]; then
+    gate M17 ok "Sektionsgrenzen verfügbar"
+  else
+    gate M17 warn "Sektionsgrenzen fehlen" "capture/sections.json fehlt — Slider/Sektionsvergleich degradieren"
+  fi
+else
+  gate M16 warn "Keine Original-Screenshots eingebettet" "capture/shot-*.png fehlt — Vorher/Nachher-Ansicht entfällt"
+  gate M17 warn "Sektionsgrenzen nicht prüfbar" "capture/sections.json ohne Original-Screenshots nicht nutzbar"
+fi
+
+if [[ "$has_capture" != true ]]; then
+  gate M14 warn "Split-Slider entfällt" "capture/shot-*.png fehlt — Vorher/Nachher-Slider nicht verfügbar"
+  gate M15 warn "Antwort-Kopie entfällt" "capture/shot-*.png fehlt — Vergleichsansicht nicht verfügbar"
+elif ab open "file://$OUT_HTML" >/dev/null 2>&1; then
+  ab wait --load load >/dev/null 2>&1 || true
+  ab wait 500 >/dev/null 2>&1 || true
+  split_ok="$(ab_eval '!!document.querySelector("[data-split]") && [375,768,1440].every((w) => !!document.querySelector("[data-viewport-tab=\""+w+"\"]"))')"
+  if [[ "$has_all_capture" != true ]]; then
+    gate M14 warn "Split-Slider unvollständig" "nur $capture_count von 3 Original-Screenshots vorhanden"
+  elif [[ "$split_ok" == "true" ]]; then
+    gate M14 ok "Split-Slider für 375/768/1440 vorhanden"
+  else
+    gate M14 fail "Split-Slider unvollständig" "Viewport-Tabs oder Slider fehlen"
+  fi
+  copy_ok="$(ab_eval '(() => { const b = [...document.querySelectorAll("button")].find((x) => x.textContent.includes("Antwort kopieren")); if (!b) return false; b.click(); const t = document.querySelector(".shell-copy-text"); return !!(t && t.value.includes("Gewählte Richtung")); })()')"
+  if [[ "$copy_ok" == "true" ]]; then
+    gate M15 ok "Antwort kopieren liefert strukturierten Text"
+  else
+    gate M15 fail "Antwort kopieren unvollständig" "Button oder strukturierter Text fehlt"
+  fi
+else
+  gate M14 fail "Split-Slider nicht browser-prüfbar" "agent-browser konnte file://$OUT_HTML nicht öffnen"
+  gate M15 fail "Antwort kopieren nicht browser-prüfbar" "agent-browser konnte file://$OUT_HTML nicht öffnen"
 fi
 
 # ── Ergebnis: gates.json + Promote ──────────────────────────────────────────

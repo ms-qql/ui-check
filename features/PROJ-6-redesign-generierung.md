@@ -123,7 +123,7 @@ recipes/  (im Repo, versioniert wie rubrics/)
     tailwind-theme.css) → `redesign-context.json` (Scores + Cai-Teilscores,
     Top-Befunde, Branding-Lage, user_prompt, Rezept-Version). Leere Palette ⇒
     Exit 1 (degradiert) mit `notes`.
-  - **VERIFY** (`--verify <run-dir>`): 13 deterministische Gates (G1–G13, siehe
+  - **VERIFY** (`--verify <run-dir>`): 14 deterministische Gates (G1–G14, siehe
     `scripts/README.md`) → `redesign/verify.json`; rote Gates ⇒ Exit 2,
     nur Warnungen ⇒ Exit 1. Führt `status.json` → `phases.redesign` fort (Jupiter).
 - **`recipes/`** — versionierte Rezepte (`VERSION` `2026.07-1`, `safe.md`,
@@ -136,11 +136,12 @@ recipes/  (im Repo, versioniert wie rubrics/)
   Visual-Pass ×2 (Rezepte) → Verify → deutscher Bericht. Enthält alle
   Kontrakt-Schemata (content.json, compare.json, manifest.json, images.md,
   tokens-extra.json) + Edge-Case-Behandlung im Brief.
-- **`scripts/tests/redesign_test.sh`** — hermetische QA-Suite (**46 Assertions,
+- **`scripts/tests/redesign_test.sh`** — hermetische QA-Suite (**49 Assertions,
   alle grün**): INIT Happy Path/Gates/Degradierung, Verify komplett grün, je ein
   Rot-Fall pro Gate (Off-Token-Hex, Tailwind-Default-Palette, Google-Fonts,
   Lorem, Slot-Deckung beidseitig, CTA-Länge, Intent-Duplikat, Zigzag,
-  Brief-Abschnitt, Rezept-Versions-Konflikt, compare-Lücke), Warn-Fälle
+  Brief-Abschnitt, Rezept-Versions-Konflikt, compare-Lücke, ASCII-Umschreibungen),
+  Warn-Fälle
   (Dependency-Whitelist, Sprache), status.json-Fortschreibung.
 - **`scripts/README.md`** — `redesign.sh`-Abschnitt inkl. Gate-Tabelle + Kontrakte.
 
@@ -181,7 +182,7 @@ package.json) · `verify.json`.
 
 ### Test ausführen
 ```bash
-scripts/tests/redesign_test.sh    # 46 Assertions, hermetisch (nur jq)
+scripts/tests/redesign_test.sh    # 49 Assertions, hermetisch (nur jq)
 ```
 
 ### Offen für QA (/abc-qa)
@@ -192,29 +193,29 @@ scripts/tests/redesign_test.sh    # 46 Assertions, hermetisch (nur jq)
 
 ## QA Test Results
 **Getestet:** 2026-07-03 · **Tester:** QA Engineer (Red-Team) · **Branch:** dev  
-**Ergebnis:** READY mit 1 Medium-Bug fuer den naechsten Fix-Zyklus. Keine Critical/High-Bugs.
+**Ergebnis:** READY. Keine offenen Critical/High/Medium-Bugs.
 
 ### Scope
 - Feature-Spec, Tech-Design, Implementation Notes und Run-Ordner-Kontrakt gelesen.
 - Bestehender Echtlauf: `runs/2026-07-03-auxevo.tech-001`.
-- Zusaetzliche E2E-Probe: INIT gegen Kopie von `runs/2026-07-03-nextcontrol.de-001`.
-- Projekt ist CLI/Bash-Pipeline, kein FastAPI/Flutter-Projekt; pytest/Flutter-Schritte aus `abc-qa` sind daher nicht anwendbar. `pytest` ist in der Dashboard-Env verfuegbar (`8.3.3`), `flutter` ist nicht installiert.
+- Zusätzliche E2E-Probe: INIT gegen Kopie von `runs/2026-07-03-nextcontrol.de-001`.
+- Projekt ist CLI/Bash-Pipeline, kein FastAPI/Flutter-Projekt; pytest/Flutter-Schritte aus `abc-qa` sind daher nicht anwendbar. `pytest` ist in der Dashboard-Env verfügbar (`8.3.3`), `flutter` ist nicht installiert.
 
 ### Acceptance Criteria
 | # | Kriterium | Status | Nachweis |
 |---|---|---|---|
-| 1 | `brief.md` vor Generierung mit Conversion-Ziel, CTA, Sektionsplan, Brand-Entscheidungen | Pass | Echtlauf: `brief.md` vorhanden, Gate G2 gruen |
+| 1 | `brief.md` vor Generierung mit Conversion-Ziel, CTA, Sektionsplan, Brand-Entscheidungen | Pass | Echtlauf: `brief.md` vorhanden, Gate G2 grün |
 | 2 | Reihenfolge Struktur → Content → Visuals | Pass | `.claude/skills/ui-redesign/SKILL.md` erzwingt Ablauf; INIT-Kontext vor Content/Visuals |
 | 3 | Skill-Sandwich / Rezepte / Anti-Slop dokumentiert | Pass | `recipes/{safe,bold}.md`, `brief.md` Anti-Slop, Gates G10-G12 |
-| 4 | Token-Treue, deutsche Copy, keine erfundenen Claims | Pass | Gates G3/G6/G8 gruen; manuelle Pruefung von `content.json` |
+| 4 | Token-Treue, deutsche Copy, keine erfundenen Claims | Pass | Gates G3/G6/G8/G14 grün; manuelle Prüfung von `content.json` |
 | 5 | Komponenten + assetfreie Backgrounds, keine Bild-API-Pflicht | Pass | Vendored Komponenten vorhanden; `images.md` nur Prompt/Platzhalter |
 | 6 | Output `redesign/safe/` + `redesign/bold/` als React-Komponenten | Pass mit Hinweis | Struktur + Imports vorhanden; echter Bundle-Build bleibt bewusst PROJ-7-Gate |
-| 7 | Bild-Slots mit Platzhalter + Bild-Prompt | Pass | Gate G9 gruen; `images.md` deckt `hero-bild` |
+| 7 | Bild-Slots mit Platzhalter + Bild-Prompt | Pass | Gate G9 grün; `images.md` deckt `hero-bild` |
 
 ### Edge Cases
 | Fall | Status | Nachweis |
 |---|---|---|
-| Kein CTA im Original | Pass | Skill-Anweisung + hermetische Tests pruefen Annahme-/CTA-Kontrakt indirekt ueber Content/CTA-Gates |
+| Kein CTA im Original | Pass | Skill-Anweisung + hermetische Tests prüfen Annahme-/CTA-Kontrakt indirekt über Content/CTA-Gates |
 | Markenkontrast kollidiert mit Lesbarkeit | Pass | Brief des Echtlaufs dokumentiert Kontrastentscheidung; G6 erlaubt nur Tokens bzw. `tokens-extra.json` |
 | Sehr wenig Original-Content | Pass | Skill-Anweisung verlangt reduzierte Planung ohne erfundene Leistungen; G8 verhindert Filler-Reste |
 | `--prompt` widerspricht Branding | Pass | Skill-Anweisung dokumentiert Vorrang + Abweichungspflicht; INIT reicht `user_prompt` in Kontext durch |
@@ -222,7 +223,7 @@ scripts/tests/redesign_test.sh    # 46 Assertions, hermetisch (nur jq)
 ### Automatisierte Tests
 | Suite | Ergebnis |
 |---|---|
-| `scripts/tests/redesign_test.sh` | 48 bestanden, 0 fehlgeschlagen |
+| `scripts/tests/redesign_test.sh` | 49 bestanden, 0 fehlgeschlagen |
 | `scripts/tests/capture_test.sh` | 45 bestanden, 0 fehlgeschlagen |
 | `scripts/tests/lh_audit_test.sh` | 38 bestanden, 0 fehlgeschlagen |
 | `scripts/tests/brand_extract_test.sh` | 60 bestanden, 0 fehlgeschlagen |
@@ -231,18 +232,19 @@ scripts/tests/redesign_test.sh    # 46 Assertions, hermetisch (nur jq)
 | `scripts/redesign.sh --verify runs/2026-07-03-auxevo.tech-001` | 14 Gates ok, 0 Warnungen, 0 Fehler |
 
 ### Security / Red-Team
-- Auth, JWT, Tenant-Isolation, Rate-Limiting und MinIO sind fuer PROJ-6 nicht anwendbar: kein Backend, keine Nutzer-/Mandanten-Daten, keine Objekt-Storage-Operation.
-- Keine gefaehrlichen React-Patterns im Echtlauf gefunden (`dangerouslySetInnerHTML`, `eval`, `innerHTML`, externe Fetches).
-- Kein Google-Fonts-CDN und keine externen Assets im Redesign-Output (Gate G7 gruen).
+- Auth, JWT, Tenant-Isolation, Rate-Limiting und MinIO sind für PROJ-6 nicht anwendbar: kein Backend, keine Nutzer-/Mandanten-Daten, keine Objekt-Storage-Operation.
+- Keine gefährlichen React-Patterns im Echtlauf gefunden (`dangerouslySetInnerHTML`, `eval`, `innerHTML`, externe Fetches).
+- Kein Google-Fonts-CDN und keine externen Assets im Redesign-Output (Gate G7 grün).
 - Keine Secrets/API-Keys im Redesign-Output gefunden.
 
 ### Bugs
 | ID | Severity | Titel | Status | Verifikation |
 |---|---|---|---|---|
-| PROJ-6-BUG-1 | Medium | Dependency-Whitelist ignorierte `devDependencies` | Behoben am 2026-07-03: G13 prueft jetzt `dependencies` und `devDependencies` | `scripts/tests/redesign_test.sh` mit Regression fuer `devDependencies.vite` gruen |
+| PROJ-6-BUG-1 | Medium | Dependency-Whitelist ignorierte `devDependencies` | Behoben am 2026-07-03: G13 prüft jetzt `dependencies` und `devDependencies` | `scripts/tests/redesign_test.sh` mit Regression für `devDependencies.vite` grün |
+| PROJ-6-BUG-2 | Medium | Deutsche Artefakttexte konnten ASCII-Umschreibungen wie `fuer` enthalten | Behoben am 2026-07-03: G14 blockt sichtbare deutsche ASCII-Umschreibungen | `scripts/tests/redesign_test.sh` mit Regression für `Loesung fuer ...` grün |
 
 ### Production-Ready Decision
-**READY.** Keine offenen Critical-, High- oder Medium-Bugs. PROJ-6 kann fuer PROJ-7 genutzt werden; PROJ-6-BUG-1 ist behoben und per Regressionstest abgesichert.
+**READY.** Keine offenen Critical-, High- oder Medium-Bugs. PROJ-6 kann für PROJ-7 genutzt werden; PROJ-6-BUG-1 und PROJ-6-BUG-2 sind per Regressionstest abgesichert.
 
 ## Deployment
 _To be added by /abc-deploy_

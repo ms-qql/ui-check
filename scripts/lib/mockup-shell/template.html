@@ -18,11 +18,19 @@
     <strong>Redesign-Vorschlag</strong>
     <span class="shell-domain"><!--UICHECK:DOMAIN--></span>
   </div>
-  <nav class="shell-tabs" aria-label="Variante wählen">
-    <button type="button" class="shell-tab" data-variant-tab="safe" aria-pressed="true">Safe · Facelift</button>
-    <button type="button" class="shell-tab" data-variant-tab="bold" aria-pressed="false">Bold · Neuinterpretation</button>
-    <span data-shell-slot="tabs-extra" hidden></span>
-  </nav>
+  <div class="shell-controls">
+    <div class="shell-group">
+      <span class="shell-group-label">Variante</span>
+      <div class="shell-segment" role="group" aria-label="Variante wählen">
+        <button type="button" class="shell-tab shell-seg-tab" data-variant-tab="safe" aria-pressed="true">Safe · Facelift</button>
+        <button type="button" class="shell-tab shell-seg-tab" data-variant-tab="bold" aria-pressed="false">Bold · Neuinterpretation</button>
+      </div>
+    </div>
+    <div class="shell-group" data-shell-slot="view-group" hidden>
+      <span class="shell-group-label">Ansicht</span>
+      <span class="shell-view-tabs" data-shell-slot="tabs-extra"></span>
+    </div>
+  </div>
 </header>
 <div id="shell-slot-voting" data-shell-slot="voting" hidden></div>
 <main class="shell-main">
@@ -35,9 +43,11 @@
     <div class="shell-variant-mount" id="mount-bold"><!--UICHECK:BOLD_HTML--></div>
   </section>
 </main>
+<!--UICHECK:PROJ8_FALLBACK-->
 <div id="shell-slot-compare" data-shell-slot="compare" hidden></div>
 <footer class="shell-footer">Erstellt mit UI-Check · Lauf <!--UICHECK:RUN_ID--> · Diese Datei ist eigenständig lauffähig (offline, ohne Installation).</footer>
 <script>
+window.__MOCKUP_PROJ8 = <!--UICHECK:PROJ8_DATA-->;
 <!--UICHECK:JS-->
 </script>
 </body>

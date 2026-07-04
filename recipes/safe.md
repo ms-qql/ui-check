@@ -47,6 +47,22 @@ Conversion-Ziel aus `brief.md` ausgerichtet. Kein Risiko, kein Effekt-Feuerwerk.
 - WCAG AA auf jedem CTA und Formular-Element; im Brief gemeldete
   Kontrast-Verstöße des Originals werden hier behoben (mit Token-Begründung).
 
+## Dynamik / Ambient (Default, zurückhaltend — Motion-Dial 3)
+
+Auch Safe darf leben — aber dezent, nie als Effekt-Feuerwerk. Alle Effekte
+**token-only** (nur `--color-primary`/`--color-surface` via `color-mix`), **kein
+Bild neu erzeugt**, und in `@media (prefers-reduced-motion: reduce)` abgeschaltet.
+
+- **Ambient-Verlauf** (`effects/Ambient`, CSS): sehr langsamer, driftender
+  Token-Verlauf hinter Hero/CTA (`tone="light"` auf Weiß, `tone="dark"` auf Navy).
+  Geringe Amplitude/Deckkraft — spürbar, nicht ablenkend.
+- **Bild-Slot-Sheen** (CSS): leiser Licht-Sweep über Platzhaltern; `uic-kenburns`
+  liegt für echte Fotos bereit (Platzhalter uniform ⇒ erst mit Bild sichtbar).
+- **Dezente Reveals** (`effects/Reveal`, `motion/react`): kurzes Fade-up beim
+  Scrollen (≤ 14 px, ~0.5 s). Motion-`initial`-Styles (opacity 0) sind erlaubt —
+  der Mockup-Export macht sie in statischen Klonen (Vorschau/Vergleich) sichtbar.
+- Kein Glas, kein Auto-Karussell, keine Parallax-Hijacks — das bleibt Bold.
+
 ## Anti-Slop (Pflicht, Auswahl mechanisch per Gate geprüft)
 
 - Ein CTA-Label pro Absicht (`intent`) auf der ganzen Seite (Gate).
@@ -64,6 +80,14 @@ Conversion-Ziel aus `brief.md` ausgerichtet. Kein Risiko, kein Effekt-Feuerwerk.
 - Basis: **shadcn/ui-Kopien** (Copy-Paste-Vendoring nach
   `<variante>/components/ui/`), an Tokens angepasst — nie im Default-Zustand
   lassen. Keine Registry-Fetches zur Buildzeit.
+- **`cn()`-Utility Pflicht mit `tailwind-merge`** (shadcn-Standard:
+  `twMerge(clsx(inputs))`, Deps `clsx` + `tailwind-merge`). Reines Zusammenketten
+  von Klassen löst Konflikte NICHT auf — Override-Klassen (`bg-surface text-primary`
+  über der Variante `bg-primary text-surface`) gewinnen sonst unvorhersehbar
+  (weißer Text auf weißem Button). Buttons mit farblichem Override immer über `cn`.
+- **Kein Kontrast-Blindflug bei Overrides:** wird ein Button/Element gegenüber
+  seiner Default-Variante umgefärbt, Vorder- UND Hintergrund gemeinsam setzen
+  (nie nur `bg-*` ohne passendes `text-*`).
 - Framework-agnostisches Client-React: kein `next/*`-Import, Motion nur aus
   `motion/react` (hier kaum nötig), Icons aus **einer** Familie
   (`@phosphor-icons/react` bevorzugt).

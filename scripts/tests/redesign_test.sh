@@ -80,7 +80,7 @@ EOF
   jq -n '{sections:[
     {id:"hero",original:"Hero mit Slider",change:"Slider durch statisches Hero mit klarem CTA ersetzt."},
     {id:"leistungen",original:"Leistungsliste",change:"Liste zu gewichteter Zwei-Spalten-Gruppe umgebaut."},
-    {id:"kontakt",original:null,change:"Neu: dedizierte CTA-Sektion fuer das Conversion-Ziel."}
+    {id:"kontakt",original:null,change:"Neu: dedizierte CTA-Sektion für das Conversion-Ziel."}
   ]}' > "$rd/compare.json"
   cat > "$rd/images.md" <<'EOF'
 # Bild-Slots
@@ -217,6 +217,11 @@ run_verify "$R"; assert_eq "$(gate_status "$R" "G4")" "fail" "G4 rot bei unvolls
 mk_bad 12 # Code referenziert undeklarierten Slot
 sed -i 's/data-image-slot="hero-bild"/data-image-slot="erfunden"/' "$R/redesign/bold/App.jsx"
 run_verify "$R"; assert_eq "$(gate_status "$R" "G9")" "fail" "G9 rot bei undeklariertem Slot im Code"
+
+mk_bad 13 # ASCII-Umschreibung statt Umlaut in sichtbarer Copy
+jq '.sections[1].body = "Loesung fuer Badsanierung und Uebergabe."' \
+  "$R/redesign/shared/content.json" > "$R/c.json" && mv "$R/c.json" "$R/redesign/shared/content.json"
+run_verify "$R"; assert_eq "$(gate_status "$R" "G14")" "fail" "G14 rot bei ASCII-Umschreibungen statt Umlauten"
 assert_eq "$(jq -r '.phases.redesign.status' "$R/status.json")" "failed" "status.json: redesign failed"
 
 echo "═══ F) VERIFY: Warnungen (Exit 1, kein Abbruch) ═══"

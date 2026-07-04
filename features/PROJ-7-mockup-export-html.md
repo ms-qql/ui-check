@@ -150,10 +150,23 @@ scripts/lib/mockup-shell/    (im Repo, versioniert)
   Promote-Verhalten, `status.json` und optionalen echten E2E-Build ab.
 
 ## QA Test Results
-- 2026-07-03: `scripts/tests/mockup_export_test.sh` → 53 bestanden, 0 fehlgeschlagen.
-- 2026-07-03: `MOCKUP_EXPORT_E2E=1 scripts/tests/mockup_export_test.sh` → 58 bestanden,
-  0 fehlgeschlagen; echter Build erzeugte `mockup.html` mit 333428 Bytes und allen
+- 2026-07-03: `scripts/tests/mockup_export_test.sh` → 68 bestanden, 0 fehlgeschlagen.
+- 2026-07-03: `MOCKUP_EXPORT_E2E=1 scripts/tests/mockup_export_test.sh` → 70 bestanden,
+  0 fehlgeschlagen; echter Build erzeugte `mockup.html` mit 345639 Bytes und allen
   Publish-Gates grün.
+- 2026-07-03: Regression für PROJ-8-Degradation ergänzt: fehlende
+  `capture/shot-*.png` setzen M14-M17 auf Warnung und stoppen den Export nicht mehr
+  mit roten Browser-Gates.
+
+## Bekannte Einschränkungen / offen
+- **Vorher/Nachher-Slider (2026-07-04 ausgeblendet):** Der interaktive Wisch-Vergleich
+  ist im UI vorerst deaktiviert (Tab entfernt), da Ausrichtung Original-Screenshot ↔
+  live gerendertes Redesign + Scroll-Sync noch nicht robust sind. Sichtbar sind
+  **Redesign** und **Sektionsvergleich**. Split-Panel/Slider werden weiter gebaut
+  (Gates M14/M15 + No-JS-Fallback bleiben grün); Reaktivierung: `before-after`-Eintrag
+  in `chrome.js` `buildCompare` wieder aufnehmen.
+- **Top-Leiste (2026-07-04):** in zwei Gruppen entzerrt — „Variante" (Safe/Bold als
+  verbundener Segment-Umschalter) getrennt von „Ansicht" (Redesign/Sektionsvergleich).
 
 ## Deployment
 _To be added by /abc-deploy_

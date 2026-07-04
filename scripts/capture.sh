@@ -12,6 +12,8 @@
 #   <run-dir>/capture/shot-375.png  shot-768.png  shot-1440.png
 #   <run-dir>/capture/snapshot.txt      (A11y-Tree, token-kompakt)
 #   <run-dir>/capture/dom-meta.json     (Title, Meta, OG, Favicon, Sektionen)
+#   <run-dir>/capture/sections.json     (Sektionsgrenzen je Viewport: {id,tag,label,y,height})
+#   <run-dir>/capture/page-images.json  (On-Page-Bilder der eigenen Domain: url,w,h,alt — PROJ-20)
 #   <run-dir>/meta.json                 (URL, finale URL, Status, Dauer, Vermerke)
 #
 # Exit-Codes:  0 = ok · 2 = Abbruch (nicht erreichbar / Bot-Schutz / kein HTML)
@@ -81,6 +83,82 @@ ab_eval() {
   ab eval "$1" --json 2>/dev/null | jq -c '.data.result // empty' 2>/dev/null
 }
 
+# Sektions-Geometrie der Original-Seite (pro Viewport, bei scrollY=0 gemessen).
+# Liefert die vertikalen Hauptblöcke in Dokument-Reihenfolge als
+# [{label,y,height}] — Grundlage für den index-basierten Sektionsvergleich im
+# Mockup-Export (PROJ-7). Heuristik: Überschriften (h1/h2) + Footer als
+# Sektions-Anker (universell, auch bei "flachen" DOMs ohne <section>-Wrapper).
+# Die Sektion 0 (Hero) reicht von 0 bis zur ersten Überschrift unterhalb des
+# Folds; jede weitere Überschrift/der Footer startet eine neue Sektion.
+SECTIONS_JS='(() => {
+  try {
+    const vh = window.innerHeight;
+    const pageH = Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0);
+    const vis = (el) => { const s = getComputedStyle(el); return s.display !== "none" && s.visibility !== "hidden" && el.getBoundingClientRect().height > 0; };
+    const topOf = (el) => Math.round(el.getBoundingClientRect().top + window.scrollY);
+    const clean = (t) => String(t || "").replace(/\s+/g, " ").trim().slice(0, 60);
+
+    // Anker: sichtbare h1/h2 in Dokument-Reihenfolge + Footer.
+    const heads = [...document.querySelectorAll("h1, h2")].filter(vis)
+      .map((h) => ({ top: topOf(h), label: clean(h.innerText) }))
+      .sort((a, b) => a.top - b.top);
+    const footer = document.querySelector("footer, [role=contentinfo]");
+
+    // Grenzen aufbauen: Hero startet bei 0; jede Überschrift unterhalb 60% des
+    // ersten Viewports ist eine neue Sektionsgrenze; Footer als letzte Grenze.
+    const bounds = [{ y: 0, label: "Hero" }];
+    for (const h of heads) {
+      if (h.top >= vh * 0.6 && h.top > bounds[bounds.length - 1].y + 80) bounds.push({ y: h.top, label: h.label });
+    }
+    if (footer && vis(footer)) {
+      const ft = topOf(footer);
+      if (ft > bounds[bounds.length - 1].y + 80) bounds.push({ y: ft, label: "Footer" });
+    }
+    if (bounds.length < 2) return [];  // keine verwertbare Segmentierung -> Consumer schätzt proportional
+
+    const out = [];
+    for (let i = 0; i < bounds.length; i++) {
+      const y = bounds[i].y;
+      const end = i + 1 < bounds.length ? bounds[i + 1].y : pageH;
+      out.push({ label: bounds[i].label || ("Abschnitt " + (i + 1)), y: Math.max(0, y), height: Math.max(1, end - y) });
+    }
+    return out;
+  } catch (e) { return []; }
+})()'
+
+# On-Page-Bilder der auditierten Domain (PROJ-20-Website-Bildquelle). Nur
+# gleiche Registrable-Domain (inkl. Subdomains + www), keine data:-URIs, mit
+# gerenderten Natur-Maßen + alt; nach Fläche absteigend, gekappt. og:image als
+# garantierter Minimal-Fallback. Fremde CDNs/Marken werden bewusst verworfen
+# (Copyright-Regel: nur kunden-eigene Bilder wiederverwenden).
+PAGE_IMAGES_JS='(() => {
+  try {
+    const abs = (u) => { try { return u ? new URL(u, location.href).href : null; } catch(e){ return null; } };
+    const host = location.hostname.replace(/^www\./, "");
+    const sameSite = (h) => { h = (h||"").replace(/^www\./,""); return h === host || h.endsWith("." + host); };
+    const clean = (t) => String(t || "").replace(/\s+/g, " ").trim().slice(0, 200);
+    const seen = new Set();
+    const out = [];
+    for (const img of document.querySelectorAll("img")) {
+      const raw = img.currentSrc || img.getAttribute("src") || "";
+      const u = abs(raw);
+      if (!u || u.indexOf("data:") === 0) continue;
+      let hn; try { hn = new URL(u).hostname; } catch(e){ continue; }
+      if (!sameSite(hn)) continue;
+      const w = img.naturalWidth || img.width || 0;
+      const h = img.naturalHeight || img.height || 0;
+      if (Math.max(w, h) < 200) continue;
+      if (seen.has(u)) continue; seen.add(u);
+      out.push({ url: u, width: w, height: h, alt: clean(img.getAttribute("alt")), source: "img" });
+    }
+    out.sort((a, b) => (b.width * b.height) - (a.width * a.height));
+    const top = out.slice(0, 60);
+    const ogEl = document.querySelector("meta[property=\"og:image\"]");
+    const og = ogEl ? abs(ogEl.getAttribute("content")) : null;
+    return { domain: host, count: top.length, images: top, og_image: og };
+  } catch (e) { return { domain: null, count: 0, images: [], og_image: null }; }
+})()'
+
 # ── Argumente parsen ───────────────────────────────────────────────────────
 URL=""
 OUT=""
@@ -139,6 +217,7 @@ COOKIE_METHOD=""
 CONTENT_SUSPICION=""
 declare -a NOTES=()
 declare -a SHOTS_JSON=()
+declare -A SECTIONS_BY_VP=()
 
 # ── meta.json schreiben ────────────────────────────────────────────────────
 write_meta() {
@@ -287,6 +366,12 @@ for vw in "${VIEWPORTS[@]}"; do
 
   page_h="$(ab_eval "(() => Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0))()")"
   [[ "$page_h" =~ ^[0-9]+$ ]] || page_h=0
+
+  # Sektions-Geometrie bei scrollY=0 messen (für PROJ-7-Sektionsvergleich).
+  sec_json="$(ab_eval "$SECTIONS_JS")"
+  { [[ -n "$sec_json" ]] && jq -e 'type=="array"' <<<"$sec_json" >/dev/null 2>&1; } || sec_json="[]"
+  SECTIONS_BY_VP[$vw]="$sec_json"
+
   shot="$CAP_DIR/shot-${vw}.png"
   capped=false
   ok=false
@@ -341,11 +426,40 @@ else
   NOTES+=("DOM-Meta-Extraktion fehlgeschlagen")
 fi
 
+# page-images.json: On-Page-Bilder der eigenen Domain (PROJ-20-Website-Bildquelle).
+page_images="$(ab_eval "$PAGE_IMAGES_JS")"
+{ [[ -n "$page_images" ]] && jq -e 'type=="object"' <<<"$page_images" >/dev/null 2>&1; } \
+  || page_images='{"domain":null,"count":0,"images":[],"og_image":null}'
+if printf '%s\n' "$page_images" | jq . > "$CAP_DIR/page-images.json" 2>/dev/null; then
+  echo "  ✓ page-images.json ($(jq -r '.count' "$CAP_DIR/page-images.json") Bilder der eigenen Domain)"
+else
+  printf '%s\n' "$page_images" > "$CAP_DIR/page-images.json"
+  NOTES+=("page-images.json konnte nicht validiert werden — Website-Bildquelle (PROJ-20) degradiert")
+fi
+
+# sections.json: Original-Sektionsgrenzen je Viewport (PROJ-7-Sektionsvergleich).
+sec_total=0
+for vw in "${VIEWPORTS[@]}"; do
+  cnt="$(jq 'length' <<<"${SECTIONS_BY_VP[$vw]:-[]}" 2>/dev/null || echo 0)"
+  sec_total=$(( sec_total + cnt ))
+done
+if [[ "$sec_total" -gt 0 ]]; then
+  jq -n \
+    --argjson v375 "${SECTIONS_BY_VP[375]:-[]}" \
+    --argjson v768 "${SECTIONS_BY_VP[768]:-[]}" \
+    --argjson v1440 "${SECTIONS_BY_VP[1440]:-[]}" \
+    '{"375":$v375, "768":$v768, "1440":$v1440}' > "$CAP_DIR/sections.json" 2>/dev/null \
+    && echo "  ✓ sections.json ($(jq '."1440"|length' "$CAP_DIR/sections.json") Sektionen @1440)" \
+    || NOTES+=("sections.json konnte nicht geschrieben werden")
+else
+  NOTES+=("Keine Sektionsgrenzen erkannt — sections.json nicht geschrieben (Sektionsvergleich degradiert)")
+fi
+
 # ── Schritt 5: Finalize ────────────────────────────────────────────────────
 write_meta "ok" ""
 ab_cleanup
 
 dur=$(( $(date +%s) - START_TS ))
 echo "✓ Erfassung abgeschlossen in ${dur}s → $RUN_DIR"
-echo "  meta.json · capture/{shot-375,shot-768,shot-1440}.png · snapshot.txt · dom-meta.json"
+echo "  meta.json · capture/{shot-375,shot-768,shot-1440}.png · snapshot.txt · dom-meta.json · sections.json · page-images.json"
 exit 0

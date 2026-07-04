@@ -104,6 +104,12 @@ Edge Cases im Brief behandeln:
 - Copy: **Original-Copy verbessern, nicht erfinden** — Quelle ist
   `capture/snapshot.txt`. Deutsch, klar, aktiv; keine Filler-Verben
   („nahtlos", „revolutionär"), keine erfundenen Fakten/Claims.
+- Deutsche Copy muss echte Umlaute verwenden: `ä`, `ö`, `ü`, `Ä`, `Ö`, `Ü`,
+  `ß`. Keine ASCII-Umschreibungen wie `fuer`, `Loesung`, `ueber`,
+  `naechste`, `Erstgespraech`, `Einschaetzung`, sofern es sich um sichtbare
+  deutsche Texte, Reports oder Markdown-Artefakte handelt. Technische
+  Identifier, URLs, Dateinamen, CSS-Klassen und fremde Eigennamen bleiben
+  unverändert.
 - CTAs: **ein Label pro `intent`** auf der ganzen Seite (Gate G11);
   primäres Label ≤ 3 Wörter (Gate G10).
 

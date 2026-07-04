@@ -1,2 +1,12 @@
 runs/
 .env
+
+# Template/Registry Build-Artefakte
+node_modules/
+templates/*/poc/dist/
+templates/*/poc/node_modules/
+registry/templates/*/preview/dist/
+registry/templates/*/preview/node_modules/
+
+# Ingest-Zwischenablage (Extraktion)
+.tmp/

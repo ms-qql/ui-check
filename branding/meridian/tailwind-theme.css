@@ -1,0 +1,44 @@
+/*
+ * Branding-Profil "meridian" — Tailwind-4-Theme.
+ * Überschreibt den Registry-Token-Contract (registry/styles/tokens.css) mit der
+ * Meridian-Handschrift: dunkles, editoriales „Blueprint"-SaaS — near-black-Fläche,
+ * zweifarbige Headlines, Mono-Dispatch-Labels, roter Signal-Akzent + irisierender
+ * CTA-Glow. Struktur der Blocks bleibt gleich; nur Farben/Fonts/Radius wechseln.
+ *
+ * Konsument-Import:
+ *   @import "tailwindcss";
+ *   @import ".../branding/meridian/tailwind-theme.css";   (statt tokens.css)
+ *   @import ".../registry/styles/base.css";
+ *
+ * Hinweis: Meridian ist dunkel-default — der App-Wrapper nutzt bg-ink text-paper.
+ * Clean-Room-Nachbau aus meridian-nextjs-template.vercel.app (kein Fremdcode/Assets).
+ */
+
+/* Self-hosted Fonts (OFL, DSGVO — via Bunny geladen, kein Google-CDN) */
+@font-face { font-family: "DM Sans"; font-style: normal; font-weight: 400; font-display: swap; src: url("./fonts/dmsans-400.woff2") format("woff2"); }
+@font-face { font-family: "DM Sans"; font-style: normal; font-weight: 500; font-display: swap; src: url("./fonts/dmsans-500.woff2") format("woff2"); }
+@font-face { font-family: "DM Sans"; font-style: normal; font-weight: 700; font-display: swap; src: url("./fonts/dmsans-700.woff2") format("woff2"); }
+@font-face { font-family: "Space Grotesk"; font-style: normal; font-weight: 500; font-display: swap; src: url("./fonts/spacegrotesk-500.woff2") format("woff2"); }
+@font-face { font-family: "Space Grotesk"; font-style: normal; font-weight: 700; font-display: swap; src: url("./fonts/spacegrotesk-700.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url("./fonts/jetbrainsmono-400.woff2") format("woff2"); }
+
+@theme {
+  --color-paper: #ffffff;      /* helle Fläche / invertierte Karten */
+  --color-ink: #0a0a0a;        /* Seiten-Hintergrund (dunkel) */
+  --color-ink-soft: #16161a;   /* erhabene dunkle Karte / Hover */
+  --color-muted: #8f8f8f;      /* sekundärer Text (auf Dunkel) */
+  --color-surface: #f5f5f5;    /* helle Sekundärfläche (in invertierten Karten) */
+  --color-line: #e5e5e5;       /* Rahmen in hellen Flächen */
+
+  --color-accent: #e5484d;     /* Signal (SEV, Budget-Burn, Live-Dot) */
+  --color-accent-soft: #ff8a5c;/* wärmerer Akzent (CTA-Glow-Gradient) */
+  --color-sand: #b9b09c;       /* warmer Neutralton (selten) */
+
+  --radius: 0.625rem;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: var(--font-sans); background: var(--color-ink); color: var(--color-paper); -webkit-font-smoothing: antialiased; }

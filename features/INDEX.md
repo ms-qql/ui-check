@@ -15,7 +15,7 @@
 | PROJ-8 | [Vorher/Nachher & Voting](PROJ-8-vorher-nachher-voting.md) | P1 | 2 | In Review (QA: autom. grün, High offen) | PROJ-1, PROJ-7 |
 | PROJ-9 | [Nachher-Scoring (Score-Delta)](PROJ-9-nachher-scoring.md) | P1 | 2 | Approved | PROJ-4, PROJ-7 |
 | PROJ-10 | [Batch-Audit (Kaltakquise)](PROJ-10-batch-audit.md) | P1 | 2 | Planned | PROJ-5 |
-| PROJ-11 | [Komponenten-Registry & Recycling](PROJ-11-komponenten-registry.md) | P2 | 3 | Planned | PROJ-6 |
+| PROJ-11 | [Komponenten-Registry & Recycling](PROJ-11-komponenten-registry.md) | P2 | 3 | In Progress (Registry + Profile „verdict" & „meridian" live, 24 Blocks + hero45; Ingest-Skills template + block) | PROJ-6 |
 | PROJ-12 | [Branding-Profil-Bibliothek](PROJ-12-branding-bibliothek.md) | P2 | 3 | Planned | PROJ-3 |
 | PROJ-13 | [Portfolio-Assembler](PROJ-13-portfolio-assembler.md) | P2 | 3 | Planned | PROJ-7, PROJ-11, PROJ-12 |
 | PROJ-14 | [Jupiter-MicroApp-UI](PROJ-14-jupiter-microapp-ui.md) | P2 | 3 | In Review (QA: 3 High, 1 Medium offen) | PROJ-5 (+6–9 sinnvoll) |

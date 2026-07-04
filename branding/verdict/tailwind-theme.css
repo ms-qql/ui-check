@@ -1,0 +1,39 @@
+/*
+ * Branding-Profil "verdict" — Tailwind-4-Theme.
+ * Überschreibt den Registry-Token-Contract (registry/styles/tokens.css) mit der
+ * Verdict-Handschrift (Amber-Akzent auf Neutral, Geist). Struktur der Blocks
+ * bleibt gleich; nur Farben/Fonts/Radius wechseln.
+ *
+ * Konsument-Import:
+ *   @import "tailwindcss";
+ *   @import ".../branding/verdict/tailwind-theme.css";   (statt tokens.css)
+ *   @import ".../registry/styles/base.css";
+ */
+
+/* Self-hosted Geist (OFL, DSGVO — kein Google-CDN) */
+@font-face { font-family: "Geist"; font-style: normal; font-weight: 400; font-display: swap; src: url("./fonts/geist-latin-400.woff2") format("woff2"); }
+@font-face { font-family: "Geist"; font-style: normal; font-weight: 500; font-display: swap; src: url("./fonts/geist-latin-500.woff2") format("woff2"); }
+@font-face { font-family: "Geist"; font-style: normal; font-weight: 600; font-display: swap; src: url("./fonts/geist-latin-600.woff2") format("woff2"); }
+@font-face { font-family: "Geist"; font-style: normal; font-weight: 700; font-display: swap; src: url("./fonts/geist-latin-700.woff2") format("woff2"); }
+@font-face { font-family: "Geist Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url("./fonts/geistmono-latin-400.woff2") format("woff2"); }
+
+@theme {
+  --color-paper: #ffffff;
+  --color-ink: #0a0a0a;
+  --color-ink-soft: #171717;
+  --color-muted: #737373;
+  --color-surface: #f5f5f5;
+  --color-line: #e3ddd6;
+
+  --color-accent: #c87f2c;
+  --color-accent-soft: #e8a95c;
+  --color-sand: #c9b191;
+
+  --radius: 0.625rem;
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --font-display: "Geist", ui-sans-serif, system-ui, sans-serif;
+}
+
+body { font-family: var(--font-sans); background: var(--color-paper); color: var(--color-ink); -webkit-font-smoothing: antialiased; }
+html { scroll-behavior: smooth; }

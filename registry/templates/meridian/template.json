@@ -1,0 +1,26 @@
+{
+  "name": "meridian",
+  "title": "Meridian — Dunkles Observability/Dev-Tool-SaaS",
+  "description": "Dunkel-default, editoriale Blueprint-Optik: zweifarbige Headlines, Mono-Dispatch-Labels, Spec-Karten, Incident-Log-Tabelle, Ticket-Preise, rotes Signal + irisierender CTA-Glow. Clean-Room aus meridian-nextjs-template.vercel.app.",
+  "version": "0.1.0",
+  "recipe_style": "bold",
+  "branding": "meridian",
+  "entry": "App.jsx",
+  "content": "content.json",
+  "industry": ["saas", "developer-tools", "observability", "b2b-tech"],
+  "mood": ["dark", "editorial", "technical", "blueprint"],
+  "sections": [
+    { "id": "nav", "block": "meridian-nav" },
+    { "id": "hero", "block": "meridian-hero" },
+    { "id": "glance", "block": "meridian-glance" },
+    { "id": "bulletin", "block": "meridian-bulletin" },
+    { "id": "flow", "block": "meridian-flow" },
+    { "id": "incidents", "block": "meridian-incidents" },
+    { "id": "testimonials", "block": "meridian-testimonials" },
+    { "id": "compare", "block": "meridian-compare" },
+    { "id": "island", "block": "meridian-island" },
+    { "id": "logos", "block": "meridian-logos" },
+    { "id": "pricing", "block": "meridian-pricing" },
+    { "id": "footer", "block": "meridian-footer" }
+  ]
+}

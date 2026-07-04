@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@source "../../../blocks";
+@source "../../../lib";
+@source "../../../templates";
+@import "../../../../branding/verdict/tailwind-theme.css";
+@import "../../../styles/base.css";

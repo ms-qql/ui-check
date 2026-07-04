@@ -1,0 +1,26 @@
+{
+  "name": "verdict",
+  "title": "Verdict — Premium Kanzlei/Agentur",
+  "description": "Hell mit dunklen Foto-Sektionen, Amber-Akzent, editorial Geist-Typo. Clean-Room aus verdict-nextjs-template.vercel.app (shadcnblocks).",
+  "version": "0.1.0",
+  "recipe_style": "safe",
+  "branding": "verdict",
+  "entry": "App.jsx",
+  "content": "content.json",
+  "industry": ["legal", "agency", "professional-services"],
+  "mood": ["premium", "editorial", "trust"],
+  "sections": [
+    { "id": "nav", "block": "verdict-nav" },
+    { "id": "hero", "block": "verdict-hero" },
+    { "id": "about", "block": "verdict-about" },
+    { "id": "services", "block": "verdict-services" },
+    { "id": "cases", "block": "verdict-cases" },
+    { "id": "process", "block": "verdict-process" },
+    { "id": "team", "block": "verdict-team" },
+    { "id": "awards", "block": "verdict-awards" },
+    { "id": "testimonials", "block": "verdict-testimonials" },
+    { "id": "faq", "block": "verdict-faq" },
+    { "id": "contact", "block": "verdict-contact" },
+    { "id": "footer", "block": "verdict-footer" }
+  ]
+}

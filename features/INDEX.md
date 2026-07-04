@@ -24,7 +24,7 @@
 | PROJ-17 | [App-Modus (Flow-Walk)](PROJ-17-app-modus.md) | P3 | 4 | Planned | PROJ-1, PROJ-4 |
 | PROJ-18 | [Design-Trend-Radar](PROJ-18-trend-radar.md) | P3 | 4 | Planned | PROJ-11 |
 | PROJ-19 | [Backend-Verdrahtung & Deploy](PROJ-19-backend-deploy.md) | P3 | 4 | Planned | PROJ-6, PROJ-7, PROJ-15 |
-| PROJ-20 | [Auto-Bildbefüllung der Slots](PROJ-20-auto-bildbefuellung.md) | P1 | 2 | Approved (QA: 2 Low offen) | PROJ-6, PROJ-1 (→ PROJ-7) |
+| PROJ-20 | [Auto-Bildbefüllung der Slots](PROJ-20-auto-bildbefuellung.md) | P1 | 2 | Deployed (v0.2.0; 2 Low offen) | PROJ-6, PROJ-1 (→ PROJ-7) |
 
 **Next Available ID:** PROJ-21
 

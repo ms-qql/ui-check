@@ -1,6 +1,6 @@
 # PROJ-20: Automatische Bild-Befüllung der Redesign-Slots (Stock → Website → Generierung)
 
-## Status: Planned
+## Status: Deployed
 **Created:** 2026-07-04
 **Last Updated:** 2026-07-04
 **Prio:** P1 · **Stufe:** 2
@@ -333,4 +333,16 @@ echter End-to-End-Lauf gegen Live-Unsplash+Pexels** (Keys via `.env`).
   Skill schreiben lassen (beste Stock-Relevanz), Low-Bugs bei Gelegenheit.
 
 ## Deployment
-_To be added by /abc-deploy_
+**Released:** 2026-07-04 · **Version/Tag:** `v0.2.0` · **Branch:** `main` (Merge `ed357a3`)
+
+Kein Produktions-Host — dieses Projekt ist eine **CLI-/Claude-Skill-Pipeline** (echte
+Backend-Verdrahtung ist PROJ-19, P3/Planned). „Deployment" = Promotion nach `main` +
+Release-Tag `v0.2.0` (Stufe-2-Release). Bereitgestellt:
+- `scripts/images-fill.sh`, Capture-`page-images.json`, guarded `build.mjs`/`mockup-export.sh`.
+- Skills `ui-images-fill` + `ui-pipeline`; `docs/pipeline.md`; `.env.example`.
+
+**Nutzung:** Keys in `.env` (Unsplash/Pexels), dann `/ui-pipeline <url>` oder der 4-Schritt-Weg
+(`/ui-check` → `/ui-redesign` → `/ui-images-fill` → `/ui-mockup-export`).
+
+**Offene Follow-ups (Low, nicht release-blockierend):** BUG-3 (kostenpflichtige Generierung
+per Flag opt-in statt stiller Fallback), BUG-4 (Manifest-Maße = geladene Variante).

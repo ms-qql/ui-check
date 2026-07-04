@@ -34,6 +34,7 @@ Kein Multi-Tenant, keine Fremdnutzer: internes Tool, später als Jupiter-MicroAp
 | P0 | PROJ-4 Design-Scoring & Report | 1 | Claude-Judge: 5 Dimensionen (Visuell, KI-Generik, Performance, A11y, Conversion/Cai) → report.md + scores.json |
 | P0 | PROJ-5 Skill-Orchestrierung | 1 | `/ui-check <url>`-Skill: Run-Verwaltung, Modi (audit-only), Fehlerpfade |
 | P1 | PROJ-6 Redesign-Generierung Safe+Bold | 2 | CTA-First-Brief → 2 Varianten (Skill-Sandwich, Anti-Slop) |
+| P1 | PROJ-20 Auto-Bildbefüllung der Slots | 2 | Füllt Bild-Slots vollautomatisch: Stock (Unsplash/Pexels) → Website-eigene Bilder → KI-Generierung; Claude-Judge-Gate; ohne Key = Platzhalter (0 €) |
 | P1 | PROJ-7 Mockup-Export (HTML) | 2 | web-artifacts-builder → eine self-contained HTML-Datei + Publish-Gates |
 | P1 | PROJ-8 Vorher/Nachher & Voting | 2 | Split-Slider, Sektionsvergleich, Safe/Bold-A/B-Screen im Export |
 | P1 | PROJ-9 Nachher-Scoring (Score-Delta) | 2 | Mockup durchläuft Scoring erneut; Delta als QA-Gate & Verkaufsargument |

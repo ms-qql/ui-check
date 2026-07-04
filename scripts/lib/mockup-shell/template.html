@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="de" class="no-js" data-run-id="<!--UICHECK:RUN_ID-->">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><!--UICHECK:TITLE--></title>
+<meta name="description" content="<!--UICHECK:DESCRIPTION-->">
+<link rel="icon" href="<!--UICHECK:FAVICON-->">
+<!--UICHECK:FONTS-->
+<style>
+<!--UICHECK:CSS-->
+</style>
+</head>
+<body data-active-variant="safe">
+<script>document.documentElement.classList.replace('no-js','js')</script>
+<header class="shell-header">
+  <div class="shell-brand">
+    <strong>Redesign-Vorschlag</strong>
+    <span class="shell-domain"><!--UICHECK:DOMAIN--></span>
+  </div>
+  <div class="shell-controls">
+    <div class="shell-group">
+      <span class="shell-group-label">Variante</span>
+      <div class="shell-segment" role="group" aria-label="Variante wählen">
+        <button type="button" class="shell-tab shell-seg-tab" data-variant-tab="safe" aria-pressed="true">Safe · Facelift</button>
+        <button type="button" class="shell-tab shell-seg-tab" data-variant-tab="bold" aria-pressed="false">Bold · Neuinterpretation</button>
+      </div>
+    </div>
+    <div class="shell-group" data-shell-slot="view-group" hidden>
+      <span class="shell-group-label">Ansicht</span>
+      <span class="shell-view-tabs" data-shell-slot="tabs-extra"></span>
+    </div>
+  </div>
+</header>
+<div id="shell-slot-voting" data-shell-slot="voting" hidden></div>
+<main class="shell-main">
+  <section class="shell-variant" data-variant="safe" aria-label="Variante Safe">
+    <h2 class="shell-variant-label">Variante „Safe“ — konservatives Facelift</h2>
+    <div class="shell-variant-mount" id="mount-safe"><!--UICHECK:SAFE_HTML--></div>
+  </section>
+  <section class="shell-variant" data-variant="bold" aria-label="Variante Bold">
+    <h2 class="shell-variant-label">Variante „Bold“ — mutige Neuinterpretation</h2>
+    <div class="shell-variant-mount" id="mount-bold"><!--UICHECK:BOLD_HTML--></div>
+  </section>
+</main>
+<!--UICHECK:PROJ8_FALLBACK-->
+<div id="shell-slot-compare" data-shell-slot="compare" hidden></div>
+<footer class="shell-footer">Erstellt mit UI-Check · Lauf <!--UICHECK:RUN_ID--> · Diese Datei ist eigenständig lauffähig (offline, ohne Installation).</footer>
+<script>
+window.__MOCKUP_PROJ8 = <!--UICHECK:PROJ8_DATA-->;
+<!--UICHECK:JS-->
+</script>
+</body>
+</html>

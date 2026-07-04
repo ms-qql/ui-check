@@ -295,6 +295,24 @@ scripts/ui-check.sh --finalize <run-dir> [--industry <tag>] [--weights v,s,p,a,c
 - `--desktop` — zusätzlicher Lighthouse-Desktop-Lauf.
 - `--out` / `--timeout` — Run-Ordner erzwingen bzw. Preflight-/Ladezeit.
 
+#### `ui-check-auto.sh` — End-to-End für Jupiter (Collect → Judge → Finalize)
+
+`ui-check.sh` pausiert bewusst bei `awaiting_judge` (der Judge ist Claude). Im
+Terminal macht Claude den Judge-Pass selbst; **headless (Jupiter/PROJ-14)** übernimmt
+das `ui-check-auto.sh`: es ruft Collect auf, löst den Judge-Pass über einen headless
+`claude -p`-Lauf aus (schreibt `judge.json`) und ruft dann `--finalize`. Ohne diesen
+Treiber blieben Jupiter-Läufe dauerhaft auf `awaiting_judge` (UI: „Läuft") stehen.
+
+```
+scripts/ui-check-auto.sh <url> [<ui-check.sh-Optionen>] [--judge-model <modell>] [--no-judge]
+```
+
+- `--judge-model <modell>` — Modell für den Judge-Lauf (Default `sonnet`).
+- `--no-judge` — Collect ausführen, dann bei `awaiting_judge` stehen bleiben (manueller Judge-Pass).
+- Zusätzlicher Exit-Code **3**: Judge-Pass fehlgeschlagen → `status: error` (kein stiller Hänger).
+- Testhaken: `UI_CHECK_JUDGE_CMD` (Ersatz-Judge), `UI_CHECK_SH`, `CLAUDE_BIN`,
+  `UI_CHECK_JUDGE_MODEL`, `UI_CHECK_JUDGE_TIMEOUT`.
+
 ### Ausgabe (Run-Ordner-Kontrakt, zusätzlich zu PROJ-1–4)
 
 ```
@@ -310,6 +328,7 @@ scripts/ui-check.sh --finalize <run-dir> [--industry <tag>] [--weights v,s,p,a,c
 | Schritt | Fehler | Verhalten |
 |---|---|---|
 | Capture | Exit ≠ 0 | **Abbruch** des Laufs (`status: aborted`, Exit 2) — nichts zu bewerten. |
+| Inhalts-Gate | `content_suspicion=spa_empty` (leere/Wartungs-/nicht-gerenderte Seite) | **Abbruch** (`status: aborted`, Exit 2) — kein bewertbarer Inhalt, verhindert Hänger am Judge-Pausenpunkt. |
 | Lighthouse | Exit ≠ 0 / `status: failed` | degradieren: Perf/A11y „nicht messbar", renormiert (Exit 1). |
 | Branding | Exit ≠ 0 | degradieren: Vermerk, Lauf läuft weiter (Exit 1). |
 | Scoring | score-report Exit 1 / 2 | Exit 1 (degradiert) bzw. Exit 2 (Gate) durchgereicht. |
@@ -338,6 +357,218 @@ scripts/ui-check.sh --finalize <run-dir> [--industry <tag>] [--weights v,s,p,a,c
 - **Testbarkeit:** `UI_CHECK_BIN` lenkt die Schritt-CLIs auf ein Stub-Verzeichnis um
   (siehe `scripts/tests/ui_check_test.sh`) — hermetischer Orchestrierungs-Test ohne
   Browser/Lighthouse/Netz.
+
+## `redesign.sh` — Redesign-Generierung Safe+Bold (PROJ-6, Stufe 2)
+
+Deterministischer Treiber, den der Claude-Code-Skill `ui-redesign`
+(`.claude/skills/ui-redesign/SKILL.md`) aufruft. Die Generierung selbst
+(Brief → Struktur/Content → Visuals) macht Claude anhand der versionierten
+Rezepte in `recipes/` — der Treiber übernimmt Scaffold, Kontext-Bündelung
+und alle deterministischen Gates (Generator-Sandwich, analog PROJ-5).
+
+```bash
+# 1) INIT — Gate + Scaffold + Kontext
+scripts/redesign.sh <run-dir> [--force]
+# 2) (Claude) Brief-Pass       → redesign/brief.md
+# 3) (Claude) Struktur/Content → redesign/shared/content.json + redesign/compare.json
+# 4) (Claude) Visual-Pass ×2   → redesign/safe/ + redesign/bold/ + redesign/images.md
+# 5) VERIFY — deterministische Gates
+scripts/redesign.sh --verify <run-dir>
+```
+
+- `<run-dir>` — abgeschlossener Stufe-1-Lauf (`scores.json` + `branding/` Pflicht).
+- `--force` — Re-INIT: überschreibt `shared/` + `redesign-context.json`,
+  bereits generierte Inhalte bleiben.
+
+### Ausgabe (Run-Ordner-Kontrakt)
+
+```
+<run-dir>/redesign/
+├── redesign-context.json   INIT: Scores + Cai-Teilscores, Top-Befunde, Branding-Lage,
+│                           user_prompt, Rezept-/Rubrik-Version, degraded/notes
+├── brief.md                Brief-Pass (Pflicht-Abschnitte: Conversion-Ziel, Primärer CTA,
+│                           Sektionsplan, Brand-Entscheidungen, Anti-Slop-Constraints)
+├── compare.json            Zuordnung Original↔Redesign je Sektion + 1-Satz-Begründung (PROJ-8)
+├── images.md               je Bild-Slot: Platzhalter-Vermerk + fertiger Bild-Prompt
+├── shared/                 content.json (Sektionen + deutsche Copy, ein Content für beide
+│                           Varianten) · tokens.json + tailwind-theme.css (eingefroren) ·
+│                           optional tokens-extra.json (im Brief begründete Zusatzfarben)
+├── safe/ · bold/           buildfähige React-Varianten: App.jsx, sections/, components/,
+│                           manifest.json (variant, recipe_version, dials, sections[].layout),
+│                           package.json (Dependency-Whitelist)
+└── verify.json             Gate-Ergebnis (grün/gelb/rot je Check)
+```
+
+### Verify-Gates (deterministisch)
+
+| Gate | Prüfung | rot ⇒ Exit 2 |
+|---|---|---|
+| G1 | Ordner-/Datei-Struktur vollständig | ✓ |
+| G2 | `brief.md` enthält alle Pflicht-Abschnitte | ✓ |
+| G3 | `content.json`-Kontrakt (sections, ids, primary_cta); Sprache ≠ de nur Warnung | ✓ |
+| G4 | `compare.json` deckt alle Sektionen mit Begründung | ✓ |
+| G5 | Manifeste: variant, `recipe_version` == `recipes/VERSION`, entry, sections | ✓ |
+| G6 | Token-Lint: Hex-Farben ⊆ Tokens ∪ `tokens-extra.json` ∪ #fff/#000; keine Tailwind-Default-Palette (`bg-blue-500` …); rgb()/hsl()-Literale nur Warnung | ✓ |
+| G7 | kein Google-Fonts-CDN (DSGVO) | ✓ |
+| G8 | keine Lorem-/TODO-/FIXME-Reste | ✓ |
+| G9 | Bild-Slots: content.json ↔ `images.md` ↔ `data-image-slot` im Code | ✓ |
+| G10 | CTA-Länge: primär ≤ 3 Wörter, Sektions-CTAs ≤ 4 (Wrap-Ban) | ✓ |
+| G11 | ein CTA-Label pro `intent` (ganze Seite) | ✓ |
+| G12 | Zigzag-Cap: max. 2 × `split`-Layout in Folge, je Variante | ✓ |
+| G13 | npm-Dependency-Whitelist | nur Warnung |
+| G14 | deutsche Copy/Reports nutzen echte Umlaute statt ASCII-Umschreibungen | ✓ |
+
+### Exit-Codes
+
+| Code | Bedeutung |
+|---|---|
+| `0` | INIT vollständig bzw. alle Gates grün |
+| `1` | degradiert: INIT mit Vermerk (leere Palette) bzw. nur Warn-Gates |
+| `2` | Abbruch: Stufe-1-Lauf unvollständig, ungültige Argumente, ≥ 1 Pflicht-Gate rot |
+
+### Verhalten
+
+- **Rangordnung Markentreue:** Tokens + `brief.md` > Nutzer-Prompt > Rezept.
+  Farbabweichungen nur über `shared/tokens-extra.json` mit Begründung — der
+  Token-Lint erzwingt das.
+- **Rezept-Versionierung:** `recipes/VERSION` wird in Kontext + Manifeste
+  eingefroren; Konflikt ⇒ Gate rot (analog Rubrik-Gate in PROJ-4).
+- **status.json:** führt `phases.redesign` (`awaiting_generation` →
+  `ok|degraded|failed`) für Jupiter (PROJ-14) fort.
+- **Buildbarkeit** prüft bewusst erst PROJ-7 (Mockup-Export-Build) — hier
+  nur statisch prüfbare Kontrakte.
+- **Testbarkeit:** `scripts/tests/redesign_test.sh` — hermetische Suite
+  (49 Assertions) mit Fixture-Läufen, ohne Browser/Netz/Claude.
+
+## `mockup-export.sh` — Self-contained Mockup-HTML (PROJ-7, Stufe 2)
+
+Deterministischer Export-Treiber nach PROJ-6. Er bündelt die beiden React-Varianten
+(`redesign/safe/`, `redesign/bold/`) zu einer teilbaren `mockup.html`, rendert beide
+Varianten vor und stoppt bei roten Publish-Gates.
+
+```bash
+scripts/mockup-export.sh <run-dir> [--force]
+```
+
+- `<run-dir>` — Run mit vollständigem PROJ-6-Output und grünem
+  `redesign/verify.json`.
+- `--force` — bestehende `<run-dir>/mockup.html` überschreiben.
+
+### Ausgabe (Run-Ordner-Kontrakt)
+
+```
+<run-dir>/mockup.html
+<run-dir>/mockup/
+├── gates.json          Publish-Gates mit Status und Beleg
+├── build.log           npm-/Build-Harness-Output
+└── build-report.json   Größen- und Asset-Treiber für Diagnose
+```
+
+### Publish-Gates
+
+| Gate | Prüfung | Verstoß |
+|---|---|---|
+| M1 | Title gesetzt | rot, Exit 2 |
+| M2 | Meta-Description gesetzt | rot, Exit 2 |
+| M3 | Favicon inline | rot, Exit 2 |
+| M4 | kein Google-Fonts-CDN | rot, Exit 2 |
+| M5 | keine externen Ressourcen außer Bunny Fonts | rot, Exit 2 |
+| M6 | keine Lorem-/TODO-/FIXME-Reste | rot, Exit 2 |
+| M7 | No-JS-Baseline: beide Varianten vorgerendert, CTA sichtbar | rot, Exit 2 |
+| M8 | interne Anker haben Ziele | rot, Exit 2 |
+| M9 | Dateigröße < 5 MB | gelb, Exit 1, Promote trotzdem |
+| M10 | kein horizontales Scrollen bei 375 px | rot, Exit 2 |
+| M11 | interaktive Ansicht mountet beide Varianten | gelb, Exit 1 |
+| M12 | PROJ-8 Voting-Screen vorhanden | rot, Exit 2 |
+| M13 | `redesign/compare.json` enthält Begründungen je Vergleichs-Sektion | rot, Exit 2 |
+| M14 | Split-Slider für Original-Screenshots 375/768/1440 vorhanden | rot, Exit 2; gelb bei fehlenden/teilweisen Capture-Screenshots |
+| M15 | „Antwort kopieren" liefert strukturierten Text | rot, Exit 2; gelb ohne Capture-Screenshots |
+| M16 | No-JS-Fallback für Vorher/Nachher sichtbar | rot, Exit 2; gelb ohne Capture-Screenshots |
+| M17 | `capture/sections.json` für Sektionsvergleich verfügbar | gelb, Exit 1 |
+
+### Verhalten
+
+- **Build-Harness:** `scripts/lib/mockup-shell/` nutzt `esbuild`, `react-dom/server`
+  und Tailwind CLI. Abhängigkeiten werden im Workspace gemerged und unter
+  `~/.cache/ui-check/mockup-deps-*` gecacht; `node_modules` bleibt aus dem Repo.
+- **No-JS-Baseline:** Safe und Bold stehen statisch im HTML. JavaScript blendet im
+  Normalfall nur auf Tab-Modus um und mountet die interaktive React-Ansicht.
+- **status.json:** führt `phases.mockup` (`ok|degraded|failed`) für Jupiter (PROJ-14)
+  fort, falls die Datei im Run existiert.
+- **Testbarkeit:** `scripts/tests/mockup_export_test.sh` — hermetische Suite mit
+  Build- und Browser-Stubs; `MOCKUP_EXPORT_E2E=1` schaltet den echten npm/Browser-Build
+  gegen Fixture-Varianten dazu.
+- **QA-Stand 2026-07-03:** hermetische Suite **68/68 grün**; echter
+  `MOCKUP_EXPORT_E2E=1`-Build **70/70 grün**. Regression abgedeckt: fehlende
+  Capture-Screenshots degradieren M14-M17 gelb und blockieren den Export nicht mehr
+  mit roten PROJ-8-Browser-Gates.
+
+## `after-score.sh` — Nachher-Scoring / Score-Delta (PROJ-9, Stufe 2)
+
+Deterministischer Gate-Schritt nach PROJ-7. Das Skript bewertet nicht selbst per LLM,
+sondern konsumiert frische Nachher-Judge-Dateien für Safe/Bold, normalisiert sie mit
+derselben Rubrik-Version wie PROJ-4 und entscheidet, welche Variante ausgeliefert wird.
+Performance/Lighthouse wird für lokale Mockups bewusst als nicht vergleichbar markiert
+und aus dem Delta renormiert.
+
+```bash
+scripts/after-score.sh <run-dir> [--judge-safe <file>] [--judge-bold <file>]
+                           [--retry-safe <file>] [--retry-bold <file>]
+                           [--retry-cmd <executable>] [--threshold 15] [--force]
+```
+
+- `<run-dir>` — Run mit `scores.json`, `report.md` und `mockup.html`.
+- `--judge-safe` / `--judge-bold` — frische Judge-Ausgaben für die Varianten.
+  Defaults: `<run-dir>/after-judge-safe.json` und `<run-dir>/after-judge-bold.json`.
+- `--retry-safe` / `--retry-bold` — optionale Judge-Ausgaben nach einem Retry.
+  Defaults: `<run-dir>/after-judge-safe-retry.json` und
+  `<run-dir>/after-judge-bold-retry.json`.
+- `--retry-cmd` — optionaler automatischer Retry-Hook. Wird eine Variante initial
+  nicht ausgeliefert und existiert noch keine Retry-Judge-Datei, ruft das Skript
+  `<executable> <variant> <run-dir> <retry-brief> <retry-judge-out>` auf. Das
+  Kommando muss genau eine Retry-Judge-Datei schreiben; es wird kein `eval` genutzt.
+  Alternativ kann `AFTER_SCORE_RETRY_CMD` gesetzt werden.
+- `--threshold` — erforderliches Delta zum renormierten Originalscore, Default `15`.
+- `--force` — bestehendes `after-scoring.json` überschreiben.
+
+### Ausgabe (Run-Ordner-Kontrakt)
+
+```
+<run-dir>/scores-safe.json       Nachher-Score Safe inkl. Gate-Status
+<run-dir>/scores-bold.json       Nachher-Score Bold inkl. Gate-Status
+<run-dir>/after-scoring.json     Zusammenfassung, Gewinner, lieferbare Varianten
+<run-dir>/after-score/
+├── safe-first.json              initialer Safe-Versuch
+├── bold-first.json              initialer Bold-Versuch
+├── retry-safe.md                Feedback-Brief, falls Safe initial scheitert
+└── retry-bold.md                Feedback-Brief, falls Bold initial scheitert
+```
+
+Zusätzlich werden `report.md` und `mockup.html` idempotent mit einem
+`Nachher-Scoring`-Abschnitt bzw. Score-Delta-Badge angereichert. Existiert
+`status.json`, wird `phases.after_scoring` für Jupiter/PROJ-14 fortgeschrieben.
+
+### Exit-Codes
+
+| Code | Bedeutung |
+|---|---|
+| `0` | mindestens eine Variante besteht das Delta-Gate |
+| `1` | beide Varianten scheitern; Audit-only-Ergebnis + Fehlerbericht erzeugt |
+| `2` | Input-Gate/intern: fehlende Pflichtdatei, ungültiges JSON, Rubrik-Version-Konflikt |
+
+### Judge-Ausgabe-Kontrakt
+
+Gleicher Kernvertrag wie PROJ-4: `rubric_version`, `visual.score`, `ki_score`,
+`accessibility.score` (oder `a11y.score`) und
+`conversion.{clarity,credibility,logic,action,emotion}`. Die Accessibility-Dimension
+ist Pflicht, weil PROJ-9 den Vergleich über die vier nicht-Performance-Dimensionen
+renormiert. Findings werden nur übernommen, wenn sie Beleg und Fundort enthalten.
+
+### Testbarkeit
+
+`scripts/tests/after_score_test.sh` prüft Happy Path, Gate-Fail, Retry, Audit-only,
+Rubrik-Konflikt, Mockup-/Report-Anreicherung und `status.json` hermetisch ohne Browser
+oder LLM.
 
 ## Voraussetzungen
 

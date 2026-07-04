@@ -294,6 +294,23 @@ fi
 PH_STATUS[capture]=ok
 echo "  ✓ Capture ok"
 
+# ── Inhalts-Gate: leere / Wartungs- / nicht-gerenderte Seite ⇒ Abbruch ──────
+# Capture liefert HTTP 200, aber ohne sichtbaren Inhalt (Wartungsmodus,
+# Coming-Soon, SPA ohne SSR) gibt es nichts zu bewerten. Bricht hier ab, statt
+# in den Judge-Pausenpunkt zu laufen und dort endlos zu hängen.
+cap_suspicion="$(jq -r '.content_suspicion // empty' "$RUN_DIR/meta.json" 2>/dev/null)"
+if [[ "$cap_suspicion" == "spa_empty" ]]; then
+  cap_note="$(jq -r '.notes[0] // empty' "$RUN_DIR/meta.json" 2>/dev/null)"
+  PH_STATUS[capture]=aborted; PH_STATUS[lighthouse]=aborted
+  PH_ERR[capture]="Seite ohne bewertbaren Inhalt (Wartungsmodus / Coming-Soon / SPA ohne SSR). ${cap_note}"
+  CURRENT_PHASE="aborted"
+  write_status "aborted"
+  echo "✗ Seite ohne bewertbaren Inhalt — nichts zu bewerten, Lauf abgebrochen." >&2
+  echo "  Grund: ${cap_note:-content_suspicion=spa_empty}" >&2
+  echo "  (Screenshots liegen in $RUN_DIR/capture zur Sichtkontrolle.)" >&2
+  exit 2
+fi
+
 # Lighthouse-Fehler ⇒ degradieren, weiterlaufen.
 DEGRADED=false
 lh_status="$(jq -r '.status // "failed"' "$RUN_DIR/lighthouse/lh-summary.json" 2>/dev/null)"

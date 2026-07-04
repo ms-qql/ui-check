@@ -73,6 +73,17 @@ h2{font-size:18px;font-weight:600;margin-bottom:16px}
 .seg{display:inline-flex;border:1px solid var(--border-strong);border-radius:var(--r-md);overflow:hidden}
 .seg button{font-family:var(--mono);font-size:11px;letter-spacing:.08em;background:none;border:none;color:var(--muted);padding:9px 14px;cursor:pointer}
 .seg button.on{background:rgba(13,148,136,.15);color:var(--glow)}
+.run-form{display:grid;gap:16px}
+.run-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.agent-picker{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.agent-option{min-height:86px;text-align:left;background:var(--ink);border:1px solid var(--border-strong);border-radius:var(--r-md);padding:12px;cursor:pointer;color:var(--text)}
+.agent-option:hover{border-color:var(--muted)}
+.agent-option.on{border-color:var(--accent);background:rgba(13,148,136,.1)}
+.agent-option .k{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--glow)}
+.agent-option .t{font-size:14px;font-weight:600;margin-top:6px}
+.agent-option .d{font-size:12px;color:var(--muted);line-height:1.35;margin-top:4px}
+.model-row{display:grid;grid-template-columns:minmax(180px,240px) minmax(220px,1fr);gap:12px;align-items:end;margin-top:12px}
+.model-select{width:100%}
 .chip{font-family:var(--mono);font-size:11px;letter-spacing:.06em;padding:6px 12px;border:1px solid var(--border-strong);border-radius:999px;background:none;color:var(--muted);cursor:pointer}
 .chip.on{border-color:var(--accent);color:var(--glow);background:rgba(13,148,136,.1)}
 .icon-btn{width:34px;height:34px;border-radius:999px;border:1px solid var(--border-strong);background:none;color:var(--muted);cursor:pointer;display:grid;place-items:center;font-size:15px;line-height:1}
@@ -190,6 +201,16 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .section-gap{margin-top:48px}
 footer{border-top:1px solid var(--border);padding:24px 0;margin-top:40px}
 footer .shell{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--muted2)}
+@media (max-width:900px){
+  .agent-picker{grid-template-columns:repeat(2,1fr)}
+  .model-row{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .shell{padding:0 18px}
+  .agent-picker{grid-template-columns:1fr}
+  .run-row .input,.run-row .btn,.run-row .seg{width:100%}
+  .run-row .seg button{flex:1}
+}
 </style>
 </head>
 <body>
@@ -234,19 +255,55 @@ footer .shell{display:flex;justify-content:space-between;font-family:var(--mono)
     <p class="sub">URL eingeben — UI-Check erstellt Scoring, extrahiert das Branding und schlägt zwei Redesign-Varianten vor.</p>
 
     <div class="card" style="margin-top:28px">
-      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-        <input class="input" style="flex:1;min-width:280px" placeholder="https://kunden-website.de" value="https://mueller-sanitaer-cux.de">
-        <div class="seg">
-          <button class="on">AUDIT + REDESIGN</button><button>NUR AUDIT</button>
+      <div class="run-form">
+        <div class="run-row">
+          <input class="input" style="flex:1;min-width:280px" placeholder="https://kunden-website.de" value="https://mueller-sanitaer-cux.de">
+          <div class="seg">
+            <button class="on">AUDIT + REDESIGN</button><button>NUR AUDIT</button>
+          </div>
+          <div class="seg">
+            <button class="on">AUTO</button><button>LANDING</button><button>APP</button>
+          </div>
+          <button class="btn primary">Lauf starten</button>
         </div>
-        <div class="seg">
-          <button class="on">AUTO</button><button>LANDING</button><button>APP</button>
+        <div>
+          <label class="field-lbl">KI-Agent</label>
+          <div class="agent-picker" role="radiogroup" aria-label="KI-Anbieter auswählen">
+            <button class="agent-option on" type="button" role="radio" aria-checked="true" data-provider="claude">
+              <div class="k">CLAUDE</div>
+              <div class="t">Anthropic Claude</div>
+              <div class="d">Stark für UI-Urteile, Textarbeit und längere Begründungen.</div>
+            </button>
+            <button class="agent-option" type="button" role="radio" aria-checked="false" data-provider="codex">
+              <div class="k">CODEX</div>
+              <div class="t">OpenAI Codex</div>
+              <div class="d">Geeignet für strukturierte Analyse, Code und robuste Pipeline-Schritte.</div>
+            </button>
+            <button class="agent-option" type="button" role="radio" aria-checked="false" data-provider="openrouter">
+              <div class="k">OPENROUTER</div>
+              <div class="t">OpenRouter</div>
+              <div class="d">Alternative Modellfamilie für schnelle Entwürfe und Varianten.</div>
+            </button>
+          </div>
+          <div class="model-row">
+            <div>
+              <label class="field-lbl">Anbieter</label>
+              <input class="input" id="providerLabel" value="Claude" readonly>
+            </div>
+            <div>
+              <label class="field-lbl">Modell</label>
+              <select class="input model-select" id="modelSelect" aria-label="Modell auswählen">
+                <option>Claude Sonnet</option>
+                <option>Claude Opus</option>
+                <option>Claude Haiku</option>
+              </select>
+            </div>
+          </div>
         </div>
-        <button class="btn primary">Lauf starten</button>
-      </div>
-      <div style="margin-top:16px">
-        <label class="field-lbl">Spezielle Anweisungen an die KI · optional</label>
-        <textarea class="input" placeholder="z. B. Fokus auf Online-Terminbuchung als Conversion-Ziel · Farbwelt der Marke beibehalten · kein Stock-Foto-Look · Zielgruppe: Hausbesitzer 45+ · Ton bodenständig, kein Startup-Sprech"></textarea>
+        <div>
+          <label class="field-lbl">Spezielle Anweisungen an die KI · optional</label>
+          <textarea class="input" placeholder="z. B. Fokus auf Online-Terminbuchung als Conversion-Ziel · Farbwelt der Marke beibehalten · kein Stock-Foto-Look · Zielgruppe: Hausbesitzer 45+ · Ton bodenständig, kein Startup-Sprech"></textarea>
+        </div>
       </div>
     </div>
 
@@ -614,6 +671,31 @@ document.querySelectorAll('nav.tabs button').forEach(b=>{
 });
 document.getElementById('themeToggle').addEventListener('click',()=>{
   document.body.classList.toggle('light');
+});
+const modelOptions={
+  claude:['Claude Sonnet','Claude Opus','Claude Haiku'],
+  codex:['Codex','Codex Mini','Codex Pro'],
+  openrouter:['OpenRouter Auto','OpenRouter Reasoning','OpenRouter Fast']
+};
+const providerNames={claude:'Claude',codex:'Codex',openrouter:'OpenRouter'};
+document.querySelectorAll('.agent-option').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.agent-option').forEach(x=>{
+      x.classList.remove('on');
+      x.setAttribute('aria-checked','false');
+    });
+    b.classList.add('on');
+    b.setAttribute('aria-checked','true');
+    const provider=b.dataset.provider;
+    document.getElementById('providerLabel').value=providerNames[provider]||provider;
+    const select=document.getElementById('modelSelect');
+    select.innerHTML='';
+    (modelOptions[provider]||[]).forEach(name=>{
+      const option=document.createElement('option');
+      option.textContent=name;
+      select.append(option);
+    });
+  });
 });
 const cmp=document.getElementById('cmp');
 document.getElementById('cmpRange').addEventListener('input',e=>{

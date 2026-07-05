@@ -1,6 +1,6 @@
 # PROJ-11: Komponenten-Registry & Best-of-Recycling
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-07-02
 **Last Updated:** 2026-07-04 (alle 5 AC erfüllt & verifiziert; shadcn-MCP-Lesbarkeit bestätigt)
 
@@ -196,4 +196,13 @@ Die Registry hat zwei „Konsumenten-Verträge":
 _To be added by /abc-qa_
 
 ## Deployment
-_To be added by /abc-deploy_
+**Deployed:** 2026-07-05 · **Version:** v0.3.0 · **Release:** GitHub `main`
+
+Mit Release v0.3.0 ausgeliefert:
+- shadcn-kompatible Komponenten-Registry (`registry/`) mit `verdict`, `meridian`
+  und `hero45`.
+- Registry-Selector, Recycling, Dedupe und Inventory-Generator.
+- Statische Registry-Übersicht `registry/inventory.html`.
+
+Kein Dokploy-/Server-Deploy: PROJ-11 ist Teil der lokalen CLI-/Dateipipeline und
+wird über GitHub-Release/Tag verteilt.

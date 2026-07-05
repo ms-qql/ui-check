@@ -15,9 +15,9 @@
 | PROJ-8 | [Vorher/Nachher & Voting](PROJ-8-vorher-nachher-voting.md) | P1 | 2 | In Review (QA: autom. grün, High offen) | PROJ-1, PROJ-7 |
 | PROJ-9 | [Nachher-Scoring (Score-Delta)](PROJ-9-nachher-scoring.md) | P1 | 2 | Approved | PROJ-4, PROJ-7 |
 | PROJ-10 | [Batch-Audit (Kaltakquise)](PROJ-10-batch-audit.md) | P1 | 2 | Planned | PROJ-5 |
-| PROJ-11 | [Komponenten-Registry & Recycling](PROJ-11-komponenten-registry.md) | P2 | 3 | In Review (alle 5 AC ✓ & verifiziert; Profile „verdict" & „meridian" + hero45; Selektor/Browser/Dedupe/Recycling; shadcn-build grün) | PROJ-6 |
-| PROJ-12 | [Branding-Profil-Bibliothek](PROJ-12-branding-bibliothek.md) | P2 | 3 | Approved | PROJ-3 |
-| PROJ-13 | [Portfolio-Assembler](PROJ-13-portfolio-assembler.md) | P2 | 3 | In Review (QA: 2 High offen — Industrie-Filter, E2E-Mockup) | PROJ-7, PROJ-11, PROJ-12 |
+| PROJ-11 | [Komponenten-Registry & Recycling](PROJ-11-komponenten-registry.md) | P2 | 3 | Deployed (v0.3.0) | PROJ-6 |
+| PROJ-12 | [Branding-Profil-Bibliothek](PROJ-12-branding-bibliothek.md) | P2 | 3 | Deployed (v0.3.0) | PROJ-3 |
+| PROJ-13 | [Portfolio-Assembler](PROJ-13-portfolio-assembler.md) | P2 | 3 | Deployed (v0.3.0) | PROJ-7, PROJ-11, PROJ-12 |
 | PROJ-14 | [Jupiter-MicroApp-UI](PROJ-14-jupiter-microapp-ui.md) | P2 | 3 | In Review (QA: 3 High, 1 Medium offen) | PROJ-5 (+6–9 sinnvoll) |
 | PROJ-15 | [Feedback-Pins im Mockup](PROJ-15-feedback-pins.md) | P3 | 4 | Architected | PROJ-7, PROJ-8 |
 | PROJ-16 | [Kunden-PDF](PROJ-16-kunden-pdf.md) | P3 | 4 | Planned | PROJ-4 |

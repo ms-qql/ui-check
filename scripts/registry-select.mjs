@@ -140,6 +140,11 @@ const templates = registry.items.filter((it) => it.meta?.kind === "template");
 
 const ctx = readJSON(path.join(RD, "redesign-context.json"), {});
 const industry = ctx.industry_tag || null;
+const matchesIndustry = (item) => {
+  if (!industry) return true;
+  const tags = item.meta?.industry || [];
+  return tags.some((tag) => industry.includes(tag) || tag.includes(industry));
+};
 
 // Template auflösen: Flag > Branche-Match > einziges Template > keins.
 let template = null, templateReason = "";
@@ -182,7 +187,7 @@ const sections = plan.map(({ id, type, forcedBlock }) => {
   // Kandidaten: gleicher Sektionstyp, nicht ausgeschlossen. Stil ist WEICH (Ranking,
   // kein Ausschluss) — ein Safe-Block darf als Fallback in eine Bold-Variante.
   const cands = blocks
-    .filter((b) => canonSection(b.meta.section) === canon && !opt.exclude.includes(b.name))
+    .filter((b) => canonSection(b.meta.section) === canon && matchesIndustry(b) && !opt.exclude.includes(b.name))
     .map((b) => ({ b, score: (b.meta.source === templateBranding ? 2 : 0) + (!b.meta.style || b.meta.style === opt.style ? 1 : 0) }))
     .sort((a, b) => b.score - a.score);
   const pick = cands[0]?.b || null;

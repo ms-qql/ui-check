@@ -221,7 +221,7 @@ die `redesign.sh --verify` und `mockup-export.sh` erwarten.
 ```bash
 scripts/ui-check.sh --assemble --branding <slug> --industry <tag> \
   [--sections hero,trust,features,pricing,cta] \
-  [--prompt "<Kunden-Briefing>"]
+  [--prompt "<Kunden-Briefing>"] [--no-export]
 ```
 
 Direkt nutzbar ist auch:
@@ -241,26 +241,34 @@ runs/YYYY-MM-DD-assemble-<branding>-<industry>-NNN/
     ├── registry-config.json
     ├── registry-selection.safe.json
     ├── registry-selection.bold.json
+    ├── verify.json
     ├── registry/
     ├── shared/
     │   ├── content.json
     │   ├── tokens.json
     │   └── tailwind-theme.css
     ├── safe/
+    │   ├── App.jsx
+    │   ├── manifest.json
+    │   └── package.json
     └── bold/
+        ├── App.jsx
+        ├── manifest.json
+        └── package.json
 ```
 
 `registry-selection.*.json` markiert je Sektion `decision: "registry"` oder
-`decision: "generate"`. Generierte Fallbacks werden anschließend im
-`ui-assemble`-Skill ausgearbeitet und mit `scripts/redesign.sh --verify <run>`
-geprüft; der Export bleibt `scripts/mockup-export.sh <run>`.
+`decision: "generate"`. Der Assembler erzeugt einen exportierbaren Starter-
+Visual-Stand, führt `scripts/redesign.sh --verify <run>` aus und ruft danach
+`scripts/mockup-export.sh <run>` auf. `--no-export` überspringt nur den finalen
+Mockup-Export, lässt Verify aber laufen.
 
 ### Exit-Codes
 
 | Code | Bedeutung |
 |---|---|
 | `0` | Scaffold und Registry-Auswahl erfolgreich |
-| `1` | Degradiert: Registry-Fallbacks nötig, Lauf bleibt nutzbar |
+| `1` | Degradiert: Registry-Fallbacks oder Export-Warnungen; Lauf bleibt nutzbar und `mockup.html` liegt an, sofern der Export keine roten Gates hatte |
 | `2` | Abbruch: Eingabe ungültig oder `--registry-only` kann nicht erfüllt werden |
 
 ## `score-report.sh` — Design-Scoring & Report (PROJ-4)

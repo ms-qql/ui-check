@@ -1,6 +1,6 @@
 # PROJ-12: Branding-Profil-Bibliothek
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-07-02
 **Last Updated:** 2026-07-05
 
@@ -143,4 +143,13 @@ Profil-Übersicht (AC „Liste mit Swatches") = statische HTML wie `registry-inv
 **APPROVED.** Alle PROJ-12-Akzeptanzkriterien und dokumentierten Edge-Cases sind verifiziert; keine Critical/High/Medium-Bugs offen.
 
 ## Deployment
-_To be added by /abc-deploy_
+**Deployed:** 2026-07-05 · **Version:** v0.3.0 · **Release:** GitHub `main`
+
+Mit Release v0.3.0 ausgeliefert:
+- `scripts/brand-lib.mjs` mit `seed`, `save` und `list`.
+- Versionierte Branding-Profile `auxevo`, `verdict`, `meridian`.
+- Katalog `branding/index.json` und statische Übersicht `branding/index.html`.
+- `redesign.sh --branding <slug>` und UI-Check-Hinweis zum Speichern von Profilen.
+
+Kein Dokploy-/Server-Deploy: PROJ-12 ist Teil der lokalen CLI-/Dateipipeline und
+wird über GitHub-Release/Tag verteilt.

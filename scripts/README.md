@@ -187,6 +187,90 @@ scripts/brand-extract.sh <url> [--out <run-dir>] [--timeout 60] [--brandfetch-ke
 - **Farb-Clustering:** RGB-Nachbarn (Distanz < 12) werden zusammengefasst; Kern-Palette
   = Top 8 nach Häufigkeit, Rest als `extended` (max. 24 gesamt).
 
+## `brand-lib.mjs` — Branding-Profil-Bibliothek (PROJ-12)
+
+Versioniert Branding-Artefakte aus Läufen in `branding/<slug>/vN/`, hält
+`current` als aktiven Versionszeiger und erzeugt den Katalog
+`branding/index.json` + `branding/index.html` mit Swatches.
+
+```bash
+node scripts/brand-lib.mjs seed
+node scripts/brand-lib.mjs save <run-dir> [--slug <slug>] [--as v2]
+node scripts/brand-lib.mjs list
+```
+
+- `seed` — importiert Auxevo aus `/home/dev/tools/Hal/00 Context/`
+  (`Branding.md`, `design-system.html`) als `branding/auxevo/v1/`.
+- `save` — kopiert `<run-dir>/branding/` als neue Version. Existiert der Slug
+  bereits, wird automatisch `v2`, `v3` usw. angelegt; explizite `--as vN`
+  überschreibt nie still.
+- `list` — migriert alte flache Profile (`branding/verdict/`) nach `v1/`,
+  regeneriert den Katalog und rendert die statische Übersicht.
+
+`redesign.sh <run-dir> --branding <slug>` nutzt anschließend
+`branding/<slug>/current/` statt des Run-Brandings und protokolliert die Quelle in
+`<run-dir>/.branding-source.json`. Der spätere PROJ-13-Assembler verwendet denselben
+Profilvertrag (`branding/<slug>/current/{tokens.json,tailwind-theme.css,...}`).
+
+## `assemble.sh` — Portfolio-Assembler (PROJ-13)
+
+Erzeugt einen Greenfield-Run aus Branding-Profil × Industrie-Tag, ohne vorherige
+Capture-/Audit-Phase. Der Assembler synthetisiert die gleiche `redesign/`-Struktur,
+die `redesign.sh --verify` und `mockup-export.sh` erwarten.
+
+```bash
+scripts/ui-check.sh --assemble --branding <slug> --industry <tag> \
+  [--sections hero,trust,features,pricing,cta] \
+  [--prompt "<Kunden-Briefing>"] [--no-export]
+```
+
+Direkt nutzbar ist auch:
+
+```bash
+scripts/assemble.sh --branding <slug> --industry <tag>
+```
+
+### Ausgabe
+
+```
+runs/YYYY-MM-DD-assemble-<branding>-<industry>-NNN/
+├── ui-check.json
+├── status.json
+└── redesign/
+    ├── redesign-context.json
+    ├── registry-config.json
+    ├── registry-selection.safe.json
+    ├── registry-selection.bold.json
+    ├── verify.json
+    ├── registry/
+    ├── shared/
+    │   ├── content.json
+    │   ├── tokens.json
+    │   └── tailwind-theme.css
+    ├── safe/
+    │   ├── App.jsx
+    │   ├── manifest.json
+    │   └── package.json
+    └── bold/
+        ├── App.jsx
+        ├── manifest.json
+        └── package.json
+```
+
+`registry-selection.*.json` markiert je Sektion `decision: "registry"` oder
+`decision: "generate"`. Der Assembler erzeugt einen exportierbaren Starter-
+Visual-Stand, führt `scripts/redesign.sh --verify <run>` aus und ruft danach
+`scripts/mockup-export.sh <run>` auf. `--no-export` überspringt nur den finalen
+Mockup-Export, lässt Verify aber laufen.
+
+### Exit-Codes
+
+| Code | Bedeutung |
+|---|---|
+| `0` | Scaffold und Registry-Auswahl erfolgreich |
+| `1` | Degradiert: Registry-Fallbacks oder Export-Warnungen; Lauf bleibt nutzbar und `mockup.html` liegt an, sofern der Export keine roten Gates hatte |
+| `2` | Abbruch: Eingabe ungültig oder `--registry-only` kann nicht erfüllt werden |
+
 ## `score-report.sh` — Design-Scoring & Report (PROJ-4)
 
 Mergt die **Claude-Judge-Ausgabe** (`judge.json`) mit den Lighthouse- (PROJ-2) und
@@ -368,7 +452,7 @@ und alle deterministischen Gates (Generator-Sandwich, analog PROJ-5).
 
 ```bash
 # 1) INIT — Gate + Scaffold + Kontext
-scripts/redesign.sh <run-dir> [--force]
+scripts/redesign.sh <run-dir> [--force] [--branding <slug>]
 # 2) (Claude) Brief-Pass       → redesign/brief.md
 # 3) (Claude) Struktur/Content → redesign/shared/content.json + redesign/compare.json
 # 4) (Claude) Visual-Pass ×2   → redesign/safe/ + redesign/bold/ + redesign/images.md
@@ -379,6 +463,8 @@ scripts/redesign.sh --verify <run-dir>
 - `<run-dir>` — abgeschlossener Stufe-1-Lauf (`scores.json` + `branding/` Pflicht).
 - `--force` — Re-INIT: überschreibt `shared/` + `redesign-context.json`,
   bereits generierte Inhalte bleiben.
+- `--branding <slug>` — nutzt `branding/<slug>/current/` aus der
+  Branding-Bibliothek statt `<run-dir>/branding/`.
 
 ### Ausgabe (Run-Ordner-Kontrakt)
 

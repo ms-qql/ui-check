@@ -1,0 +1,33 @@
+/*
+ * UI-Check Registry — Token-Contract (branding-neutral).
+ * Jeder Registry-Block nutzt AUSSCHLIESSLICH diese semantischen Tokens
+ * (keine Tailwind-Default-Palette wie bg-blue-500, kein Roh-Hex im Block).
+ * Ein Branding-Profil (branding/<slug>/tailwind-theme.css) überschreibt die
+ * Werte — Struktur bleibt gleich, nur die Farben/Fonts wechseln.
+ *
+ * Utilities, die daraus in Tailwind v4 entstehen (Auszug):
+ *   bg-paper text-ink text-muted bg-surface border-line
+ *   bg-ink text-paper (dunkle Sektionen)  text-accent bg-accent  bg-sand
+ *   rounded-[var(--radius)]  font-sans font-mono
+ */
+@theme {
+  /* Flächen & Text */
+  --color-paper: #ffffff;   /* Seiten-Hintergrund (hell) */
+  --color-ink: #0a0a0a;     /* Vordergrund / dunkle Sektionsfläche */
+  --color-ink-soft: #171717;/* dunkle Fläche, leicht aufgehellt (Hover/Nav) */
+  --color-muted: #737373;   /* sekundärer Text */
+  --color-surface: #f5f5f5; /* dezent erhabene Fläche / Inputs */
+  --color-line: #e3ddd6;    /* Rahmen / Divider */
+
+  /* Marken-Akzent */
+  --color-accent: #c87f2c;      /* Primärakzent */
+  --color-accent-soft: #e8a95c; /* hellerer Akzent */
+  --color-sand: #c9b191;        /* warmer Ton für Kennzahl-Kacheln */
+
+  --radius: 0.625rem;
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  /* Optionale Display-Rolle: fällt neutral auf font-sans zurück. Ein Branding-
+     Profil kann eine eigene Headline-Schrift setzen (z. B. meridian: Space Grotesk). */
+  --font-display: var(--font-sans);
+}

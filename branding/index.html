@@ -1,0 +1,36 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>UI-Check Branding-Bibliothek</title>
+<style>
+:root{--bg:#0b0b0c;--panel:#151517;--line:#2b2b30;--ink:#f4f4f5;--muted:#a1a1aa;--accent:#0d9488}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 ui-sans-serif,system-ui,sans-serif}
+header{position:sticky;top:0;background:linear-gradient(var(--bg),var(--bg) 80%,transparent);padding:28px 24px 14px}
+h1{font-size:22px;margin:0}.sub{color:var(--muted);font-size:13px;margin-top:4px}.controls{display:flex;gap:8px;margin-top:14px}
+input{width:min(520px,100%);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font:inherit}
+main{padding:10px 24px 60px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px}.top{display:flex;gap:12px;align-items:center}
+.logo{width:42px;height:42px;border:1px solid var(--line);border-radius:8px;display:grid;place-items:center;overflow:hidden;background:#fff}
+.logo img{max-width:100%;max-height:100%;display:block}.fallback{font-weight:700;color:var(--accent)}
+h2{font-size:16px;margin:0}.meta{font-family:ui-monospace,monospace;font-size:12px;color:var(--muted);margin-top:2px}
+.sw{display:flex;gap:6px;margin:14px 0}.sw span{width:28px;height:28px;border-radius:6px;border:1px solid rgba(255,255,255,.18)}
+.tags{display:flex;gap:6px;flex-wrap:wrap}.tag{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:var(--muted)}
+.tag.on{border-color:var(--accent);color:var(--accent)}.empty{color:var(--muted);padding:30px 0}
+</style></head><body>
+<header><h1>Branding-Bibliothek</h1><div class="sub">3 Profile · auto-generiert aus <code>branding/*/profile.json</code></div>
+<div class="controls"><input id="q" placeholder="Suche nach Profil, Tag, Quelle ..."/></div></header>
+<main><div class="grid" id="grid"></div><div class="empty" id="empty" hidden>Keine Profile gefunden.</div></main>
+<script>
+const DATA=[{"slug":"auxevo","name":"Auxevo","tags":["ai","software","mittelstand","dark-first"],"industry":"AI \u0026 Software","tone":"Modern, technisch, minimalistisch; Dark-first mit Teal-Akzent.","source":"seed","active_version":"v1","versions":["v1"],"swatches":["#0d9488","#0891b2","#0e7490","#ccfbf1","#5eead4","#0a0a0a","#171717","#1f1f1f"],"logo_path":"auxevo/v1/logo.svg","updated_at":"2026-07-05T12:41:07Z"},{"slug":"meridian","name":"Meridian","tags":[],"industry":null,"tone":null,"source":"manuell","active_version":"v1","versions":["v1"],"swatches":["#ffffff","#0a0a0a","#16161a","#8f8f8f","#f5f5f5","#e5e5e5","#e5484d","#ff8a5c"],"logo_path":"meridian/v1/logo.svg","updated_at":"2026-07-05T12:41:07Z"},{"slug":"verdict","name":"Verdict","tags":[],"industry":null,"tone":null,"source":"manuell","active_version":"v1","versions":["v1"],"swatches":["#ffffff","#0a0a0a","#171717","#737373","#f5f5f5","#e3ddd6","#c87f2c","#e8a95c"],"logo_path":"verdict/v1/logo.svg","updated_at":"2026-07-05T12:41:07Z"}];
+const grid=document.getElementById('grid'),q=document.getElementById('q'),empty=document.getElementById('empty');
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function card(p){const d=document.createElement('article');d.className='card';
+ const hay=[p.slug,p.name,p.source,p.industry,p.tone,...(p.tags||[])].join(' ').toLowerCase();
+ d.dataset.hay=hay;
+ const logo=p.logo_path?'<img src="'+esc(p.logo_path)+'" alt=""/>':'<span class="fallback">'+esc(p.slug.slice(0,2).toUpperCase())+'</span>';
+ d.innerHTML='<div class="top"><div class="logo">'+logo+'</div><div><h2>'+esc(p.name)+'</h2><div class="meta">'+esc(p.slug)+' · '+esc(p.active_version)+'</div></div></div>'+
+ '<div class="sw">'+(p.swatches||[]).map(c=>'<span title="'+esc(c)+'" style="background:'+esc(c)+'"></span>').join('')+'</div>'+
+ '<div class="tags"><span class="tag on">'+esc(p.source||'manuell')+'</span>'+(p.industry?'<span class="tag">'+esc(p.industry)+'</span>':'')+(p.tags||[]).map(t=>'<span class="tag">'+esc(t)+'</span>').join('')+'</div>';
+ return d;}
+function render(){const term=q.value.trim().toLowerCase();grid.innerHTML='';let n=0;for(const p of DATA){const c=card(p);if(term&&!c.dataset.hay.includes(term))continue;grid.append(c);n++;}empty.hidden=n>0;}
+q.addEventListener('input',render);render();
+</script></body></html>

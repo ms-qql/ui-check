@@ -16,7 +16,7 @@ ROOT="$(cd "$HERE/../.." && pwd)"
 RG="$ROOT/scripts/redesign.sh"
 RCV="$(head -1 "$ROOT/recipes/VERSION")"
 WORK="$(mktemp -d)"
-trap 'rm -rf "$WORK"' EXIT
+trap 'rm -rf "$WORK" "$ROOT/branding/test-prof"' EXIT
 
 command -v jq >/dev/null 2>&1 || { echo "✗ jq nicht installiert"; exit 1; }
 
@@ -130,7 +130,7 @@ assert_eq "$(jq -r '.user_prompt' "$CTX")" "Fokus auf Terminbuchung" "user_promp
 assert_eq "$(jq -r '.scores.total' "$CTX")" "61" "Gesamtscore im Kontext"
 assert_eq "$(jq -r '.scores.cai.action' "$CTX")" "40" "Cai-Teilscore (action) im Kontext"
 assert_eq "$(jq -r '.top_findings[0].title' "$CTX")" "CTA unter dem Fold" "Top-Befund im Kontext"
-assert_eq "$(jq -r '.branding.palette_size' "$CTX")" "2" "Palette-Größe im Kontext"
+assert_eq "$(jq -r '.branding.palette_size' "$CTX")" "4" "Farbtoken-Anzahl im Kontext"
 assert_eq "$(jq -r '.phases.redesign.status' "$R/status.json")" "awaiting_generation" "status.json: phases.redesign"
 
 echo "═══ B) INIT: Gates ═══"
@@ -146,9 +146,25 @@ run_init "$R"; assert_eq "$?" "2" "Exit 2 bei existierendem redesign/ ohne --for
 run_init "$R" "--force"; assert_eq "$?" "0" "--force erlaubt Re-INIT"
 run_init "$WORK/gibt-es-nicht"; assert_eq "$?" "2" "Exit 2 bei fehlendem Run-Ordner"
 
+echo "═══ B2) INIT: Branding-Profil aus Bibliothek ═══"
+R="$WORK/run-b5"; mk_run "$R"
+mkdir -p "$ROOT/branding/test-prof/v1"
+jq -n '{color:{palette:[{hex:"#445566"}],primary:{"$value":"#445566"},surface:{"$value":"#ffffff"},text:{"$value":"#111827"}}}' \
+  > "$ROOT/branding/test-prof/v1/tokens.json"
+printf '@theme {\n  --color-primary: #445566;\n  --color-surface: #ffffff;\n  --color-text: #111827;\n}\n' \
+  > "$ROOT/branding/test-prof/v1/tailwind-theme.css"
+jq -n '{slug:"test-prof",name:"Test Prof",source:"seed",active_version:"v1",versions:[{version:"v1"}]}' \
+  > "$ROOT/branding/test-prof/profile.json"
+ln -sfn v1 "$ROOT/branding/test-prof/current"
+rm -rf "$R/branding"
+run_init "$R" "--branding test-prof"
+assert_eq "$?" "0" "INIT Exit 0 mit --branding"
+assert_eq "$(jq -r '.color.primary["$value"]' "$R/redesign/shared/tokens.json")" "#445566" "shared/tokens aus Profil"
+assert_eq "$(jq -r '.slug' "$R/.branding-source.json")" "test-prof" ".branding-source.json protokolliert Slug"
+
 echo "═══ C) INIT: degradiert (leere Palette) ═══"
 R="$WORK/run-c"; mk_run "$R"
-jq '.color.palette = []' "$R/branding/tokens.json" > "$R/t.json" && mv "$R/t.json" "$R/branding/tokens.json"
+jq '.color = {}' "$R/branding/tokens.json" > "$R/t.json" && mv "$R/t.json" "$R/branding/tokens.json"
 run_init "$R"; assert_eq "$?" "1" "Exit 1 bei leerer Token-Palette"
 assert_eq "$(jq -r '.degraded' "$R/redesign/redesign-context.json")" "true" "degraded-Flag im Kontext"
 assert_eq "$(jq '.notes|length > 0' "$R/redesign/redesign-context.json")" "true" "notes erklären die Degradierung"

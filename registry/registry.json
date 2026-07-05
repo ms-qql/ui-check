@@ -1,0 +1,203 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "ui-check",
+  "homepage": "https://ui-check.local/registry",
+  "$meta": {
+    "description": "UI-Check Komponenten-Registry (PROJ-11). Token-agnostische React-19/Tailwind-4-Blocks, kuratiert aus Templates. Jeder Block nutzt nur semantische Tokens (siehe registry/styles/tokens.css); Look kommt aus einem Branding-Profil (branding/<slug>/).",
+    "conventions": {
+      "tech": "React 19, Tailwind v4, motion/react optional; kein next/*",
+      "tokens": "nur paper/ink/ink-soft/muted/surface/line/accent/accent-soft/sand + radius/font — keine Tailwind-Default-Palette, kein Roh-Hex",
+      "images": "data-image-slot-Contract (Slot aus lib/ui.jsx); Registry speichert KEINE Fotos",
+      "section_id": "jede Block-Wurzel rendert id={id} (^[a-z0-9-]+$)"
+    },
+    "styles": ["registry:style"]
+  },
+  "items": [
+    {
+      "name": "verdict-lib",
+      "type": "registry:lib",
+      "title": "Verdict Lib (cn + UI-Primitives)",
+      "description": "cn()-Helper und token-agnostische Primitives: Eyebrow, Button, TextLink, Slot, Logo.",
+      "dependencies": ["react"],
+      "files": [
+        { "path": "lib/cn.js", "type": "registry:lib" },
+        { "path": "lib/ui.jsx", "type": "registry:lib" }
+      ]
+    },
+    {
+      "name": "verdict-styles",
+      "type": "registry:style",
+      "title": "Registry Token-Contract + Basis-Utilities",
+      "description": "Branding-neutrale @theme-Tokens und Utility-Klassen (eyebrow, mono-label, display, section-padding, container-x).",
+      "files": [
+        { "path": "styles/tokens.css", "type": "registry:file", "target": "styles/tokens.css" },
+        { "path": "styles/base.css", "type": "registry:file", "target": "styles/base.css" }
+      ]
+    },
+
+    { "name": "hero45", "type": "registry:block", "title": "Hero 45 — Feature-Slider-Hero", "description": "Outline-Badge, zentrierte Headline, breites Landscape-Bild (gerundet, unten ausgeblendet) und drei icon-geführte Feature-Spalten; das Bild crossfadet beim Hover der jeweiligen Spalte. Trägt eine Default-Copy als `demo`-Export.",
+      "dependencies": ["react"], "registryDependencies": ["verdict-lib"],
+      "files": [{ "path": "blocks/hero45.jsx", "type": "registry:block" }],
+      "meta": { "section": "hero", "style": "safe", "interactive": true, "industry": ["saas", "startup", "technology"], "source": "shadcnblocks/hero45 (free)", "date": "2026-07-04", "image_slots": ["hero45-visual-1", "hero45-visual-2", "hero45-visual-3"] } },
+
+    { "name": "verdict-nav", "type": "registry:block", "title": "Verdict — Nav", "description": "Schwebende, abgerundete dunkle Navigationsleiste mit Blur und Pill-CTA.",
+      "dependencies": ["react"], "registryDependencies": ["verdict-lib"],
+      "files": [{ "path": "blocks/verdict-nav.jsx", "type": "registry:block" }],
+      "meta": { "section": "nav", "style": "safe", "industry": ["legal", "agency", "professional-services"], "source": "verdict", "date": "2026-07-04", "image_slots": [] } },
+
+    { "name": "verdict-hero", "type": "registry:block", "title": "Verdict — Hero", "description": "Dunkler Full-Bleed-Foto-Hero mit Eyebrow, großer Headline, Bullets, zwei Pill-CTAs und Kennzahlen-/Trusted-by-Leiste.",
+      "dependencies": ["react"], "registryDependencies": ["verdict-lib"],
+      "files": [{ "path": "blocks/verdict-hero.jsx", "type": "registry:block" }],
+      "meta": { "section": "hero", "style": "safe", "industry": ["legal", "agency", "professional-services"], "source": "verdict", "date": "2026-07-04", "image_slots": ["hero-visual"] } },
+
+    { "name": "verdict-about", "type": "registry:block", "title": "Verdict — About / Stats", "description": "Intro-Headline + Fließtext, dunkle Bildkarte, vier Kennzahlen, Rating-Zeile mit Bewertungs-Labels.",
+      "dependencies": ["react"], "registryDependencies": ["verdict-lib"],
+      "files": [{ "path": "blocks/verdict-about.jsx", "type": "registry:block" }],
+      "meta": { "section": "about", "style": "safe", "industry": ["legal", "agency", "professional-services"], "source": "verdict", "date": "2026-07-04", "image_slots": ["about-visual"] } },
+
+    { "name": "verdict-services", "type": "registry:block", "title": "Verdict — Services (interaktiv)", "description": "Interaktiver Panel-Strip: ein expandiertes Bild-Panel + eingeklappte Spalten mit römischen Ziffern und vertikalem Text (Hover/Focus).",
+      "dependencies": ["react"], "registryDependencies": ["verdict-lib"],
+      "files": [{ "path": "blocks/verdict-services.jsx", "type": "registry:block" }],
+      "meta": { "section": "services", "style": "safe", "interactive": true, "industry": ["legal", "agency", "professional-services"], "source": "verdict", "date": "2026-07-04", "image_slots": ["service-01", "service-02", "service-03", "service-04", "service-05"] } },
+
+    { "name": "verdict-cases", "type": "registry:block", "title": "Verdict — Case Studies (Sticky-Stack)", "description": "Sticky-gestapelte Fall-Karten mit Nummer, Tags, Ergebnis, Gericht/Jahr und alternierendem Bild.",
+      "dependencies": ["react"], "registryDependencies": ["verdict-lib"],
+      "files": [{ "path": "blocks/verdict-cases.jsx", "type": "registry:block" }],
+      "meta": { "section": "portfolio", "style": "safe", "industry": ["legal", "agency", "professional-services"], "source": "verdict", "date": "2026-07-04", "image_slots": ["case-01", "case-02", "case-03", "case-04"] } },
+
+    { "name": "verdict-process", "type": "registry:block", "title": "Verdict — Process (Stepper)", "description": "Großes Bild-Panel mit Step-Overlay + Fünf-Schritt-Tracker; Bild/Text wechseln pro Schritt.",
+      "dependencies": ["react"], "registryDependencies": ["verdict-lib"],
+      "files": [{ "path": "blocks/verdict-process.jsx", "type": "registry:block" }],
+      "meta": { "section": "process", "style": "safe", "interactive": true, "industry": ["legal", "agency", "professional-services"], "source": "verdict", "date": "2026-07-04", "image_slots": ["process-1", "process-2", "process-3", "process-4", "process-5"] } },
+
+    { "name": "verdict-team", "type": "registry:block", "title": "Verdict — Team", "description": "Versetztes Porträt-Grid (6 Personen) mit Namen/Rolle-Overlay und Hover-Zoom.",
+      "dependencies": ["react"], "registryDependencies": ["verdict-lib"],
+      "files": [{ "path": "blocks/verdict-team.jsx", "type": "registry:block" }],
+      "meta": { "section": "team", "style": "safe", "industry": ["legal", "agency", "professional-services"], "source": "verdict", "date": "2026-07-04", "image_slots": ["team-1", "team-2", "team-3", "team-4", "team-5", "team-6"] } },
+
+    { "name": "verdict-awards", "type": "registry:block", "title": "Verdict — Awards / Trust", "description": "Bildkarte + Award-Liste; erste Zeile hervorgehoben, Akzent-Nummern, Jahr rechts.",
+      "dependencies": ["react"], "registryDependencies": ["verdict-lib"],
+      "files": [{ "path": "blocks/verdict-awards.jsx", "type": "registry:block" }],
+      "meta": { "section": "trust", "style": "safe", "industry": ["legal", "agency", "professional-services"], "source": "verdict", "date": "2026-07-04", "image_slots": ["awards-visual"] } },
+
+    { "name": "verdict-testimonials", "type": "registry:block", "title": "Verdict — Testimonials (Bento)", "description": "Bento-Grid aus Foto-, Zitat- und Kennzahl-Kacheln (hell/dunkel/sand).",
+      "dependencies": ["react"], "registryDependencies": ["verdict-lib"],
+      "files": [{ "path": "blocks/verdict-testimonials.jsx", "type": "registry:block" }],
+      "meta": { "section": "social-proof", "style": "safe", "industry": ["legal", "agency", "professional-services"], "source": "verdict", "date": "2026-07-04", "image_slots": ["testimonial-0", "testimonial-4", "testimonial-6", "testimonial-8"] } },
+
+    { "name": "verdict-faq", "type": "registry:block", "title": "Verdict — FAQ", "description": "Zweispaltig: links Headline + Kontakt-Prompt, rechts Accordion (erste Frage offen).",
+      "dependencies": ["react"], "registryDependencies": ["verdict-lib"],
+      "files": [{ "path": "blocks/verdict-faq.jsx", "type": "registry:block" }],
+      "meta": { "section": "faq", "style": "safe", "interactive": true, "industry": ["legal", "agency", "professional-services"], "source": "verdict", "date": "2026-07-04", "image_slots": [] } },
+
+    { "name": "verdict-contact", "type": "registry:block", "title": "Verdict — Contact / CTA", "description": "Kontaktformular-Karte + Amber-Gradient-CTA-Karte mit Kontaktzeilen.",
+      "dependencies": ["react"], "registryDependencies": ["verdict-lib"],
+      "files": [{ "path": "blocks/verdict-contact.jsx", "type": "registry:block" }],
+      "meta": { "section": "cta", "style": "safe", "industry": ["legal", "agency", "professional-services"], "source": "verdict", "date": "2026-07-04", "image_slots": [] } },
+
+    { "name": "verdict-footer", "type": "registry:block", "title": "Verdict — Footer", "description": "Dunkler vierspaltiger Footer: Marke/Tagline, Firm-Links, Offices, Contact + Rechtszeile.",
+      "dependencies": ["react"], "registryDependencies": ["verdict-lib"],
+      "files": [{ "path": "blocks/verdict-footer.jsx", "type": "registry:block" }],
+      "meta": { "section": "footer", "style": "safe", "industry": ["legal", "agency", "professional-services"], "source": "verdict", "date": "2026-07-04", "image_slots": [] } },
+
+    {
+      "name": "verdict-template",
+      "type": "registry:block",
+      "title": "Verdict — Komplett-Template",
+      "description": "Gesamt-Template (12 Blocks komponiert) für Premium-Kanzlei/Agentur. Content in templates/verdict/content.json, Branding-Profil branding/verdict/.",
+      "dependencies": ["react"],
+      "registryDependencies": ["verdict-lib", "verdict-nav", "verdict-hero", "verdict-about", "verdict-services", "verdict-cases", "verdict-process", "verdict-team", "verdict-awards", "verdict-testimonials", "verdict-faq", "verdict-contact", "verdict-footer"],
+      "files": [
+        { "path": "templates/verdict/App.jsx", "type": "registry:block" },
+        { "path": "templates/verdict/content.json", "type": "registry:file", "target": "content.json" }
+      ],
+      "meta": { "kind": "template", "style": "safe", "industry": ["legal", "agency", "professional-services"], "branding": "verdict", "source": "verdict-nextjs-template.vercel.app (shadcnblocks, clean-room)", "date": "2026-07-04", "sections": 12 }
+    },
+
+    {
+      "name": "meridian-lib",
+      "type": "registry:lib",
+      "title": "Meridian Lib (Primitives)",
+      "description": "Token-agnostische Meridian-Primitives: Logo, Button (mit Glow), TextLink, DispatchBar, SpecCard, Barcode, Slot. Nutzt den geteilten cn()-Helper.",
+      "dependencies": ["react"],
+      "files": [
+        { "path": "lib/cn.js", "type": "registry:lib" },
+        { "path": "lib/meridian-ui.jsx", "type": "registry:lib" }
+      ]
+    },
+
+    { "name": "meridian-nav", "type": "registry:block", "title": "Meridian — Nav", "description": "Schwebende, transparente dunkle Top-Leiste mit Globus-Wortmarke und Pill-CTA.",
+      "dependencies": ["react"], "registryDependencies": ["meridian-lib"],
+      "files": [{ "path": "blocks/meridian-nav.jsx", "type": "registry:block" }],
+      "meta": { "section": "nav", "style": "bold", "industry": ["saas", "developer-tools", "observability"], "source": "meridian", "date": "2026-07-04", "image_slots": [] } },
+
+    { "name": "meridian-hero", "type": "registry:block", "title": "Meridian — Hero", "description": "Dunkler Hero mit zweizeiliger Space-Grotesk-Headline, zwei CTAs (Primary mit irisierendem Glow) und perspektivisch gekipptem Produkt-Slot.",
+      "dependencies": ["react"], "registryDependencies": ["meridian-lib"],
+      "files": [{ "path": "blocks/meridian-hero.jsx", "type": "registry:block" }],
+      "meta": { "section": "hero", "style": "bold", "industry": ["saas", "developer-tools", "observability"], "source": "meridian", "date": "2026-07-04", "image_slots": ["hero-visual"] } },
+
+    { "name": "meridian-glance", "type": "registry:block", "title": "Meridian — Glance (Feature-Liste)", "description": "Zweifarbige Headline + Mono-Spec-Karte, darunter Bild-Slot mit Registration-Marks und A–F-Feature-Liste.",
+      "dependencies": ["react"], "registryDependencies": ["meridian-lib"],
+      "files": [{ "path": "blocks/meridian-glance.jsx", "type": "registry:block" }],
+      "meta": { "section": "feature-list", "style": "bold", "industry": ["saas", "developer-tools", "observability"], "source": "meridian", "date": "2026-07-04", "image_slots": ["glance-visual"] } },
+
+    { "name": "meridian-bulletin", "type": "registry:block", "title": "Meridian — Bulletin (Stats)", "description": "Dispatch-Bar + zweifarbige Headline links, drei Kennzahlen rechts (mittlere invertiert), Fuß-Band mit CTAs.",
+      "dependencies": ["react"], "registryDependencies": ["meridian-lib"],
+      "files": [{ "path": "blocks/meridian-bulletin.jsx", "type": "registry:block" }],
+      "meta": { "section": "stats", "style": "bold", "industry": ["saas", "developer-tools", "observability"], "source": "meridian", "date": "2026-07-04", "image_slots": [] } },
+
+    { "name": "meridian-flow", "type": "registry:block", "title": "Meridian — Flow (Steps)", "description": "Vierstufiger Ablauf (erster Schritt hervorgehoben) neben einem stickenden Watch-/Device-Mockup mit SEV-Karte und Budget-Burn-Meter.",
+      "dependencies": ["react"], "registryDependencies": ["meridian-lib"],
+      "files": [{ "path": "blocks/meridian-flow.jsx", "type": "registry:block" }],
+      "meta": { "section": "steps", "style": "bold", "interactive": true, "industry": ["saas", "developer-tools", "observability"], "source": "meridian", "date": "2026-07-04", "image_slots": [] } },
+
+    { "name": "meridian-incidents", "type": "registry:block", "title": "Meridian — Incidents (Log-Tabelle)", "description": "Asymmetrische Doppel-Headline + Incident-Log-Tabelle mit Mini-Sparklines; Peak-Zeile rot hervorgehoben.",
+      "dependencies": ["react"], "registryDependencies": ["meridian-lib"],
+      "files": [{ "path": "blocks/meridian-incidents.jsx", "type": "registry:block" }],
+      "meta": { "section": "log-table", "style": "bold", "industry": ["saas", "developer-tools", "observability"], "source": "meridian", "date": "2026-07-04", "image_slots": [] } },
+
+    { "name": "meridian-testimonials", "type": "registry:block", "title": "Meridian — Testimonials", "description": "Horizontal scrollende Portrait-Zitat-Karten im Editorial-Frame-Stil mit Pagination.",
+      "dependencies": ["react"], "registryDependencies": ["meridian-lib"],
+      "files": [{ "path": "blocks/meridian-testimonials.jsx", "type": "registry:block" }],
+      "meta": { "section": "testimonials", "style": "bold", "interactive": true, "industry": ["saas", "developer-tools", "observability"], "source": "meridian", "date": "2026-07-04", "image_slots": ["testimonial-1", "testimonial-2", "testimonial-3"] } },
+
+    { "name": "meridian-compare", "type": "registry:block", "title": "Meridian — Compare (us vs them)", "description": "Vergleichstabelle mit zwei Display-Titeln (Legacy durchgestrichen) und sieben Kategorie-Zeilen.",
+      "dependencies": ["react"], "registryDependencies": ["meridian-lib"],
+      "files": [{ "path": "blocks/meridian-compare.jsx", "type": "registry:block" }],
+      "meta": { "section": "comparison", "style": "bold", "industry": ["saas", "developer-tools", "observability"], "source": "meridian", "date": "2026-07-04", "image_slots": [] } },
+
+    { "name": "meridian-island", "type": "registry:block", "title": "Meridian — Island (Showcase)", "description": "Großes Blueprint-Panel (metallischer Rahmen) mit Phone-/Dynamic-Island-Mockup und zyklischer Live-Aktivitäts-Liste.",
+      "dependencies": ["react"], "registryDependencies": ["meridian-lib"],
+      "files": [{ "path": "blocks/meridian-island.jsx", "type": "registry:block" }],
+      "meta": { "section": "showcase", "style": "bold", "industry": ["saas", "developer-tools", "observability"], "source": "meridian", "date": "2026-07-04", "image_slots": [] } },
+
+    { "name": "meridian-logos", "type": "registry:block", "title": "Meridian — Logos", "description": "Dispatch-Bar + zweifarbige Headline und 4×2-Logo-Wand (bordiertes Grid, Wortmarken als Text, Hover-Detail).",
+      "dependencies": ["react"], "registryDependencies": ["meridian-lib"],
+      "files": [{ "path": "blocks/meridian-logos.jsx", "type": "registry:block" }],
+      "meta": { "section": "logos", "style": "bold", "industry": ["saas", "developer-tools", "observability"], "source": "meridian", "date": "2026-07-04", "image_slots": [] } },
+
+    { "name": "meridian-pricing", "type": "registry:block", "title": "Meridian — Pricing (Tickets)", "description": "Drei Preis-Tickets im Beleg-/Receipt-Stil (Mono, gestrichelte Divider, Perforation, Faux-Barcode); mittleres invertiert + hervorgehoben.",
+      "dependencies": ["react"], "registryDependencies": ["meridian-lib"],
+      "files": [{ "path": "blocks/meridian-pricing.jsx", "type": "registry:block" }],
+      "meta": { "section": "pricing", "style": "bold", "industry": ["saas", "developer-tools", "observability"], "source": "meridian", "date": "2026-07-04", "image_slots": [] } },
+
+    { "name": "meridian-footer", "type": "registry:block", "title": "Meridian — Footer", "description": "Dispatch-Bar, Riesen-Wortmarke (paper→muted-Verlauf), Newsletter (Glow-CTA), drei Link-Spalten, Rechtszeile.",
+      "dependencies": ["react"], "registryDependencies": ["meridian-lib"],
+      "files": [{ "path": "blocks/meridian-footer.jsx", "type": "registry:block" }],
+      "meta": { "section": "footer", "style": "bold", "industry": ["saas", "developer-tools", "observability"], "source": "meridian", "date": "2026-07-04", "image_slots": [] } },
+
+    {
+      "name": "meridian-template",
+      "type": "registry:block",
+      "title": "Meridian — Komplett-Template",
+      "description": "Gesamt-Template (12 Blocks komponiert) für dunkles Observability-/Dev-Tool-SaaS. Content in templates/meridian/content.json, Branding-Profil branding/meridian/.",
+      "dependencies": ["react"],
+      "registryDependencies": ["meridian-lib", "meridian-nav", "meridian-hero", "meridian-glance", "meridian-bulletin", "meridian-flow", "meridian-incidents", "meridian-testimonials", "meridian-compare", "meridian-island", "meridian-logos", "meridian-pricing", "meridian-footer"],
+      "files": [
+        { "path": "templates/meridian/App.jsx", "type": "registry:block" },
+        { "path": "templates/meridian/content.json", "type": "registry:file", "target": "content.json" }
+      ],
+      "meta": { "kind": "template", "style": "bold", "industry": ["saas", "developer-tools", "observability", "b2b-tech"], "branding": "meridian", "source": "meridian-nextjs-template.vercel.app (clean-room)", "date": "2026-07-04", "sections": 12 }
+    }
+  ]
+}

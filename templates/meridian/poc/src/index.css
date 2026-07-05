@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+/* ---- Self-hosted Fonts (OFL, DSGVO-konform, via Bunny geladen, kein Google-CDN) ---- */
+@font-face { font-family: "DM Sans"; font-style: normal; font-weight: 400; font-display: swap; src: url("./assets/fonts/dmsans-400.woff2") format("woff2"); }
+@font-face { font-family: "DM Sans"; font-style: normal; font-weight: 500; font-display: swap; src: url("./assets/fonts/dmsans-500.woff2") format("woff2"); }
+@font-face { font-family: "DM Sans"; font-style: normal; font-weight: 700; font-display: swap; src: url("./assets/fonts/dmsans-700.woff2") format("woff2"); }
+@font-face { font-family: "Space Grotesk"; font-style: normal; font-weight: 500; font-display: swap; src: url("./assets/fonts/spacegrotesk-500.woff2") format("woff2"); }
+@font-face { font-family: "Space Grotesk"; font-style: normal; font-weight: 700; font-display: swap; src: url("./assets/fonts/spacegrotesk-700.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url("./assets/fonts/jetbrainsmono-400.woff2") format("woff2"); }
+
+/* ---- Design-Tokens (token-agnostisch: nur semantische Namen) ---- */
+@theme {
+  --color-paper: #ffffff;      /* helle Fläche / invertierte Karten */
+  --color-ink: #0a0a0a;        /* Seiten-Hintergrund (dunkel) */
+  --color-ink-soft: #16161a;   /* erhabene dunkle Karte / Hover */
+  --color-muted: #8f8f8f;      /* sekundärer Text (auf Dunkel) */
+  --color-surface: #f5f5f5;    /* helle Sekundärfläche (in invertierten Karten) */
+  --color-line: #e5e5e5;       /* Rahmen in hellen Flächen */
+  --color-accent: #e5484d;     /* Signal (SEV, Budget-Burn, Live-Dot) */
+  --color-accent-soft: #ff8a5c;/* wärmerer Akzent (CTA-Glow-Gradient) */
+  --color-sand: #b9b09c;       /* warmer Neutralton (selten) */
+  --radius: 0.625rem;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: var(--font-sans); background: var(--color-ink); color: var(--color-paper); -webkit-font-smoothing: antialiased; }
+
+/* Section-Rhythmus */
+.section-padding { padding-block: clamp(4rem, 8vw, 8rem); }
+.container-x { width: 100%; max-width: 82rem; margin-inline: auto; padding-inline: clamp(1.25rem, 4vw, 2.5rem); }
+
+/* Mono-Label (uppercase, gesperrt) — JetBrains Mono */
+.mono-label { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .18em; font-size: .68rem; }
+
+/* Große Display-Headline — Space Grotesk */
+.display { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.02em; line-height: 1.0; }
+
+/* Feine Blueprint-Punktraster-Textur (Dispatch-Strips) */
+.dot-grid { background-image: radial-gradient(currentColor 0.5px, transparent 0.5px); background-size: 8px 8px; }

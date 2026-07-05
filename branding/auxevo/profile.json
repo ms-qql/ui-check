@@ -1,0 +1,37 @@
+{
+  "slug": "auxevo",
+  "name": "Auxevo",
+  "industry": "AI & Software",
+  "tags": [
+    "ai",
+    "software",
+    "mittelstand",
+    "dark-first"
+  ],
+  "tone": "Modern, technisch, minimalistisch; Dark-first mit Teal-Akzent.",
+  "source": "seed",
+  "origin": {
+    "files": [
+      "/home/dev/tools/Hal/00 Context/Branding.md",
+      "/home/dev/tools/Hal/00 Context/design-system.html"
+    ]
+  },
+  "created_at": "2026-07-05T12:41:07Z",
+  "updated_at": "2026-07-05T12:41:07Z",
+  "active_version": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "created_at": "2026-07-05T12:41:07Z",
+      "source": "seed"
+    }
+  ],
+  "logo": {
+    "status": "extrahiert",
+    "file": "logo.svg"
+  },
+  "fonts": {
+    "status": "manuell",
+    "note": "DM Sans / JetBrains Mono; Bunny Fonts oder self-hosted, kein Google-CDN."
+  }
+}

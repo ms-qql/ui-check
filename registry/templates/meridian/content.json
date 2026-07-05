@@ -1,0 +1,213 @@
+{
+  "$meta": {
+    "template": "meridian",
+    "description": "Dunkles, editoriales Observability-/Dev-Tool-SaaS — Blueprint-Optik, zweifarbige Headlines, Mono-Dispatch-Labels, Ticket-Preise. Generalisierte Platzhalter-Copy (keine Kundendaten).",
+    "recipe_style": "bold",
+    "branding": "meridian"
+  },
+  "image_slots": [
+    { "id": "hero-visual", "section": "hero", "role": "cover", "aspect": "16/9" },
+    { "id": "glance-visual", "section": "glance", "role": "cover", "aspect": "square" },
+    { "id": "testimonial-1", "section": "testimonials", "role": "portrait", "aspect": "4/5" },
+    { "id": "testimonial-2", "section": "testimonials", "role": "portrait", "aspect": "4/5" },
+    { "id": "testimonial-3", "section": "testimonials", "role": "portrait", "aspect": "4/5" }
+  ],
+  "sections": [
+    {
+      "id": "nav", "block": "meridian-nav", "type": "nav",
+      "word": "Meridian",
+      "links": ["Product", "Pricing", "Docs", "Blog"],
+      "cta": "Start free trial"
+    },
+    {
+      "id": "hero", "block": "meridian-hero", "type": "hero",
+      "title": ["One console for your", "logs, metrics, and traces"],
+      "body": "Replace noisy dashboards with a single observability console that only pages you when it matters.",
+      "ctas": [
+        { "label": "Start free trial", "variant": "primary", "glow": true },
+        { "label": "See how it works", "variant": "quiet" }
+      ],
+      "imageSlot": "hero-visual"
+    },
+    {
+      "id": "glance", "block": "meridian-glance", "type": "feature-list",
+      "kicker": "Meridian,", "title": "at a glance.",
+      "imageSlot": "glance-visual", "imageLabel": "Surface",
+      "spec": { "title": "§ MRD / 01", "tag": "REV A", "rows": [
+        { "k": "Issued", "v": "2026.01" },
+        { "k": "Scale", "v": "1 : 1" },
+        { "k": "Sheet", "v": "1 / 3" }
+      ]},
+      "footL": "Spec · 6 zones, A through F",
+      "footR": "Hover or scroll to inspect",
+      "rows": [
+        { "key": "A", "label": "Surface", "title": "One console for logs, metrics, and traces", "sub": "Keyboard-first. ⌘K to search anything." },
+        { "key": "B", "label": "Topology", "title": "Every service mapped to its SLO", "sub": "See your full service hierarchy at a glance." },
+        { "key": "C", "label": "Signal Model", "title": "Alerts based on SLO error-budget burn", "sub": "You only get paged when your monthly budget is at risk." },
+        { "key": "D", "label": "Auto-Draft", "title": "Post-mortems written automatically", "sub": "Timeline, suspect services, and the last 3 commits — attached to every incident." },
+        { "key": "E", "label": "Query Speed", "title": "p95 queries under 120 ms worldwide", "sub": "Fast reads from every region you run in." },
+        { "key": "F", "label": "Noise Floor", "title": "97% fewer alerts since Q1 2026", "sub": "Measured across 41 customer teams." }
+      ]
+    },
+    {
+      "id": "bulletin", "block": "meridian-bulletin", "type": "stats",
+      "barLeft": "Bulletin № 01",
+      "barCenter": "MRD-2026-Q1 · Sheet 1/1",
+      "barRight": "Filed from US-EAST-1 · 03:14 UTC",
+      "kicker": "Headline · Filed 2026.04.25",
+      "title": ["Silence your", "alerts, with", "confidence."],
+      "body": "Forty-one teams ran the platform for ninety days. They went from two hundred alerts a week down to two. Not one team has asked to switch back.",
+      "footLabel": "This is not an outage.",
+      "footMuted": "It's the product.",
+      "ctas": [
+        { "label": "Start free trial", "variant": "primary", "glow": true },
+        { "label": "See pricing", "variant": "quiet" }
+      ],
+      "stats": [
+        { "value": "217", "label": "Alerts per week · before" },
+        { "value": "2", "label": "Alerts per week · after", "invert": true },
+        { "value": "215", "label": "Alerts you never see" }
+      ]
+    },
+    {
+      "id": "flow", "block": "meridian-flow", "type": "steps",
+      "kicker": "§ Night shift · 03:17 UTC",
+      "title": ["Six minutes, one", "page, no laptop."],
+      "nowShowing": "Page", "step": "Step 1 / 4",
+      "steps": [
+        { "num": "01", "tag": "Page", "title": "Alerts on every device.", "body": "The on-call engineer gets a single notification. Two taps: acknowledge or roll back." },
+        { "num": "02", "tag": "Detect", "title": "Critical incidents detected.", "body": "The platform monitors your SLO, not raw CPU graphs. An incident room opens automatically before anyone opens a laptop." },
+        { "num": "03", "tag": "Draft", "title": "The post-mortem writes itself.", "body": "Timeline, suspect services, last three commits, and correlated deploys — all attached when she opens the ticket." },
+        { "num": "04", "tag": "Resolve", "title": "Resolved, with full documentation.", "body": "Error budget is back to healthy. The incident room closes, the post-mortem is saved, and on-call goes back to sleep." }
+      ],
+      "device": {
+        "time": "03:17", "battery": "100%", "app": "MERIDIAN", "badge": "SEV-2",
+        "metric": "Tail latency", "scope": "api.payments · us-east-1",
+        "value": "0.41", "max": "/ 1.00", "meterLabel": "BUDGET BURN", "burn": 0.41,
+        "actions": [{ "label": "ROLL BACK", "primary": true }, { "label": "ACK · WATCH" }]
+      }
+    },
+    {
+      "id": "incidents", "block": "meridian-incidents", "type": "log-table",
+      "barLeft": "8 quakes · 14:02–14:05 UTC",
+      "barCenter": "Drift · 100%",
+      "barRight": "Peak L3 · 5.6 mag",
+      "titleA": ["What", "failed"], "titleB": ["what", "held"],
+      "brand": "MERIDIAN", "stepLabel": "How it works · 00",
+      "body": "Every incident starts as a gap between what the system promised and what actually happened. The platform keeps that gap visible and annotated — a live feed of every disruption — until on-call resolves it for good.",
+      "cols": ["Time", "Depth", "Shape", "Mag", "Where", "Note"],
+      "rows": [
+        { "t": "14:02:11", "d": "L1", "mag": "4.2", "where": "checkout-api", "note": "Regression · v2.4.1" },
+        { "t": "14:02:42", "d": "L2", "mag": "3.1", "where": "auth-mesh", "note": "Token rotation" },
+        { "t": "14:03:09", "d": "L1", "mag": "2.4", "where": "cdn-edge", "note": "Cache warm" },
+        { "t": "14:03:55", "d": "L3", "mag": "5.6", "where": "billing-core", "note": "Paged · oncall", "peak": true },
+        { "t": "14:04:18", "d": "L2", "mag": "2.8", "where": "search-index", "note": "Re-shard" },
+        { "t": "14:04:47", "d": "L1", "mag": "1.9", "where": "webhooks", "note": "Retry burst" },
+        { "t": "14:05:20", "d": "L2", "mag": "3.4", "where": "billing-core", "note": "Recovered" },
+        { "t": "14:05:51", "d": "L1", "mag": "2.1", "where": "search-index", "note": "Hot" }
+      ],
+      "footL": "Scroll drives drift", "footC": "Rift seals on exit", "footR": "End of tape"
+    },
+    {
+      "id": "testimonials", "block": "meridian-testimonials", "type": "testimonials",
+      "barLeft": "3 interviews · Q1 2026",
+      "barCenter": "Photographs by the customer · used with permission",
+      "barRight": "Issue 01 · Spring 2026",
+      "title": ["Quieter,", "according to the teams who've used it for a full quarter."],
+      "items": [
+        { "n": "№ 01", "quote": "We closed our first week with one page and no laptop opened. The post-mortem was waiting in Linear when I got up.", "who": "L. Chen", "role": "SRE Lead", "org": "Basin", "filed": "Filed · Brooklyn · 2026.03", "frame": "Frame 01/03", "slot": "testimonial-1" },
+        { "n": "№ 02", "quote": "I stopped dreading on-call. It decides what's worth waking me for, and it's almost always right.", "who": "M. Okafor", "role": "Platform Lead", "org": "Compass", "filed": "Filed · Berlin · 2026.02", "frame": "Frame 02/03", "slot": "testimonial-2" },
+        { "n": "№ 03", "quote": "Alert volume dropped ninety-something percent in the first month. Not one person on the team asked to switch back.", "who": "A. Reyes", "role": "Infra", "org": "Vela", "filed": "Filed · Lisbon · 2026.02", "frame": "Frame 03/03", "slot": "testimonial-3" }
+      ]
+    },
+    {
+      "id": "compare", "block": "meridian-compare", "type": "comparison",
+      "barLeft": "7 categories · head-to-head",
+      "barCenter": "Pricing, schema, ingest, retention · and more",
+      "barRight": "Updated · 2026.04",
+      "usLabel": "us", "themLabel": "them",
+      "us": "Meridian.", "them": "Legacy.",
+      "rows": [
+        { "n": "01", "cat": "Pricing", "us": "Fixed cost, all-in.", "them": "Per-host, per-metric, per-seat." },
+        { "n": "02", "cat": "Schema", "us": "Logs, metrics, traces — one.", "them": "Three products, three invoices." },
+        { "n": "03", "cat": "Ingest", "us": "OTLP native, 3ms edge.", "them": "Proprietary agents, 200ms+." },
+        { "n": "04", "cat": "Incident", "us": "A room with a runbook.", "them": "A channel, if you remember to open one." },
+        { "n": "05", "cat": "Retention", "us": "90 days, always.", "them": "7 days, then archived to cold." },
+        { "n": "06", "cat": "Exports", "us": "Parquet, NDJSON, signed S3.", "them": "Support ticket and a prayer." },
+        { "n": "07", "cat": "Onboarding", "us": "90 seconds, first trace in ten.", "them": "Two-week professional services plan." }
+      ]
+    },
+    {
+      "id": "island", "block": "meridian-island", "type": "showcase",
+      "kicker": "§ Dynamic Island · iOS, iPadOS, watchOS",
+      "title": ["The Island knows", "what you need."],
+      "nowCycling": "Now cycling",
+      "subtitle": ["Four ", "live activities,", " one Island."],
+      "device": { "time": "9:41", "date": "Thursday, April 25", "pill": "checkout-api · p99", "note": "Watching 14 services. You'll only see what matters." },
+      "activities": [
+        { "num": "01", "name": "Deploy", "meta": "US-EAST · CANARY" },
+        { "num": "02", "name": "Build", "meta": "MERIDIAN#41B2" },
+        { "num": "03", "name": "ETA", "meta": "8 MIN · HOME" },
+        { "num": "04", "name": "Page", "meta": "CHECKOUT-API", "live": true }
+      ],
+      "body": "Deploys, builds, incidents, and commute ETA — surfaced in the Dynamic Island without unlocking your phone or opening an app. Tap to switch, or let it cycle automatically."
+    },
+    {
+      "id": "logos", "block": "meridian-logos", "type": "logos",
+      "barLeft": "8 customers · since 2023",
+      "barCenter": "Hover a cell · the wall pays attention back",
+      "barRight": "Wall · quiet",
+      "title": ["Trusted by teams", "larger than ours."],
+      "foot": "Hover any logo to hear from the team behind it.",
+      "items": [
+        { "name": "Northwind", "est": "est 2023" },
+        { "name": "Streamline", "est": "est 2024" },
+        { "name": "Cadence", "est": "est 2024" },
+        { "name": "Meridian Air", "est": "est 2023" },
+        { "name": "Lodgebook", "est": "est 2024" },
+        { "name": "Ledger", "est": "est 2025" },
+        { "name": "Relay", "est": "est 2024" },
+        { "name": "Storefront", "est": "est 2025" }
+      ]
+    },
+    {
+      "id": "pricing", "block": "meridian-pricing", "type": "pricing",
+      "bar": "§ Ledger · three tickets · 2026.04",
+      "title": ["Pick a plan.", "Simple pricing, no per-seat fees."],
+      "foot": "Billed annually · 30-day trial · no card to start",
+      "plans": [
+        { "name": "Lookout", "code": "№ MRD-LK-2026", "blurb": "For the team that just stood up on-call.",
+          "includes": ["5 seats · single team", "Logs, metrics, traces · unified", "SLO-native paging", "Slack · PagerDuty", "99.95% global SLA"],
+          "lines": [["Subtotal", "$1,200.00"], ["Per-seat tax", "$0.00"]],
+          "total": "$1,200", "per": "/ yr", "auth": "AUTH · 0XMRDLK2026", "cta": "Start free trial" },
+        { "name": "Bridge", "code": "№ MRD-BR-2026", "blurb": "What forty-one teams already run.", "featured": true, "stamp": "★ Teams' pick ★",
+          "includes": ["25 seats included", "Everything in Lookout", "Auto-drafted post-mortems", "Watch · ack & roll back", "Linear · GitHub", "99.997% global SLA", "Audit log · signed"],
+          "lines": [["Subtotal", "$4,800.00"], ["Per-seat tax", "$0.00"], ["Overage fees", "$0.00"], ["Hidden charges", "$0.00"]],
+          "total": "$4,800", "per": "/ yr", "auth": "AUTH · 0XMRDBR2026", "cta": "Start free trial" },
+        { "name": "Atlas", "code": "№ MRD-AT-2026", "blurb": "When the rotation spans three time zones.",
+          "includes": ["Unlimited seats", "Everything in Bridge", "Dedicated rotation engineer", "SOC 2 · custom DPA", "Custom retention", "Priority on-call"],
+          "lines": [["Subtotal", "scaled to you"], ["Setup fee", "$0.00"]],
+          "total": "Custom", "per": "", "auth": "AUTH · 0XMRDAT2026", "cta": "Talk to us" }
+      ]
+    },
+    {
+      "id": "footer", "block": "meridian-footer", "type": "footer",
+      "barLeft": "End of dispatch",
+      "barCenter": "The quietest console of your career",
+      "barRight": "2026.04",
+      "wordmark": "Meridian",
+      "body": "Quiet is the product. Forty-one teams have run the platform for ninety days. None of them have asked to go back.",
+      "emailPlaceholder": "Work email",
+      "subscribe": "Subscribe",
+      "emailNote": "One email every fortnight · one click unsub",
+      "cols": [
+        { "head": "Product", "links": ["Console", "Log stream", "Watch alert"] },
+        { "head": "Resources", "links": ["Docs", "Pricing", "Blog"] },
+        { "head": "Legal", "links": ["Terms", "Privacy"] }
+      ],
+      "copyright": "© 2026 Meridian Co.",
+      "contact": "talk@meridian.systems",
+      "social": ["Twitter", "GitHub", "RSS"]
+    }
+  ]
+}

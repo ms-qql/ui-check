@@ -3,6 +3,33 @@
 Kompletter Weg von einer Website-URL zu einer teilbaren HTML-Vorschau mit echten
 Bildern. Vier Skill-Aufrufe in fester Reihenfolge, immer auf **denselben Run-Ordner**.
 
+## Skills sind jetzt global installiert
+
+Alle acht UI-Check-Skills liegen seit 2026-07-05 nicht mehr projektlokal unter
+`.claude/skills/`, sondern **global** unter `~/.claude/skills/<name>/` — sie sind damit
+in **jeder** Claude-Code-Sitzung per Slash-Command aufrufbar, unabhängig davon, in
+welchem Projektverzeichnis Claude Code gerade läuft. Inhaltlich bleiben sie aber an
+dieses Repo gebunden (Treiber-Skripte, `runs/`, `registry/`, `rubrics/`, `.env` liegen
+nur hier) — jeder Skill stellt seinen Bash-Befehlen deshalb ein
+`cd /home/dev/projects/design/ui-check &&` voran.
+
+## Alle Skills im Überblick
+
+| Skill | Rolle |
+|---|---|
+| `/ui-check <url>` | Stufe-1-Audit (PROJ-5): Screenshots, Lighthouse, Branding, Design-Score |
+| `/ui-redesign <run-dir>` | Stufe-2-Redesign (PROJ-6): Safe- & Bold-Variante + Bild-Slots |
+| `/ui-images-fill <run-dir>` | Bild-Slots befüllen (PROJ-20): Stock → Website → KI-Generierung |
+| `/ui-mockup-export <run-dir>` | Self-contained `mockup.html` bauen (PROJ-7) |
+| `/ui-pipeline <url>` | Fährt die vier Schritte oben automatisch nacheinander |
+| `/ui-template-ingest <url>` | Externes Template clean-room in die Komponenten-Registry (PROJ-11) aufnehmen |
+| `/ui-block-ingest <name\|url>` | Einzelnen kostenlosen shadcnblocks-Block in die Registry importieren (PROJ-11) |
+| `/ui-recycle <run-dir>` | Portfoliowürdige Sektionen eines Redesign-Laufs in die Registry übernehmen (PROJ-11) |
+
+Die ersten fünf bilden den **Kern-Flow** unten (URL → Mockup); die letzten drei
+speisen unabhängig davon die **Komponenten-Registry** (`registry/`, PROJ-11) — entweder
+aus externen Templates/Blocks oder aus guten Redesign-Läufen heraus.
+
 ## Einmalig: Setup
 
 API-Keys in `.env` (Repo-Root, gitignored) eintragen — Vorlage: `.env.example`.

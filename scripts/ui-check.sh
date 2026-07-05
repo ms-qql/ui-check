@@ -20,6 +20,12 @@
 #      score-report.sh (PROJ-4) auf → scores.json + report.md + runs.jsonl.
 #      Gibt die Terminal-Zusammenfassung aus (Gesamtscore, Top-3, Report-Pfad).
 #
+#   3) ASSEMBLE  ui-check.sh --assemble --branding <slug> --industry <tag>
+#                             [--sections hero,trust,features,pricing,cta]
+#                             [--prompt "…"]
+#      Delegiert an scripts/assemble.sh (PROJ-13): greenfield Portfolio-Mockup
+#      aus Branding-Profil × Registry statt aus Capture/Audit.
+#
 # Exit-Codes (headless-tauglich, Jupiter/PROJ-14):
 #   0  ok            — Lauf vollständig, alle Dimensionen messbar
 #   1  Teilfehler    — Lauf nutzbar, aber degradiert (Lighthouse/Logo/Dimension
@@ -45,10 +51,18 @@ CAPTURE="$BIN/capture.sh"
 LH_AUDIT="$BIN/lh-audit.sh"
 BRAND="$BIN/brand-extract.sh"
 SCORE="$BIN/score-report.sh"
+ASSEMBLE="$BIN/assemble.sh"
 
 DEFAULT_TIMEOUT=60
 
 die_intern() { echo "✗ $*" >&2; exit 2; }
+
+# PROJ-13 nutzt eigene Flags (--branding, --sections, Registry-Overrides).
+if [[ "${1:-}" == "--assemble" ]]; then
+  shift
+  [[ -f "$ASSEMBLE" ]] || die_intern "assemble.sh nicht gefunden ($ASSEMBLE)."
+  exec bash "$ASSEMBLE" "$@"
+fi
 
 # ── Argumente ──────────────────────────────────────────────────────────────
 MODE="collect"
@@ -370,5 +384,13 @@ echo
 echo "✓ Datenerfassung abgeschlossen → $RUN_DIR"
 echo "  Bereit für den Judge-Pass (Claude erzeugt judge.json gegen rubrics/)."
 echo "  Danach: ui-check.sh --finalize $RUN_DIR"
+if [[ -s "$RUN_DIR/branding/tokens.json" ]]; then
+  default_slug="$(jq -r '.final_url // .url // empty' "$RUN_DIR/ui-check.json" 2>/dev/null \
+    | sed -E 's#^https?://##; s#^www\.##; s#/.*$##; s#[^A-Za-z0-9]+#-#g; s#^-+|-+$##' \
+    | tr '[:upper:]' '[:lower:]')"
+  [[ -z "$default_slug" ]] && default_slug="$(basename "$RUN_DIR" | sed -E 's#^[0-9]{4}-[0-9]{2}-[0-9]{2}-##; s#-[0-9]+$##')"
+  echo "  Branding als Profil speichern:"
+  echo "    node scripts/brand-lib.mjs save $RUN_DIR --slug $default_slug"
+fi
 [[ "$DEGRADED" == true ]] && exit 1
 exit 0

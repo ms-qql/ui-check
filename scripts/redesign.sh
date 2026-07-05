@@ -29,6 +29,10 @@
 #   persistiert): --template <slug> · --pin <section>=<block> · --exclude <block>
 #   · --registry-only (kein Fallback) · --no-registry (Registry aus).
 #
+#   Branding-Bibliothek (PROJ-12): --branding <slug> nutzt
+#   branding/<slug>/current/ statt runs/<run>/branding/ als Quelle fuer
+#   shared/tokens.json + shared/tailwind-theme.css.
+#
 # Exit-Codes (headless-tauglich, Jupiter/PROJ-14):
 #   0  ok            — INIT vollständig bzw. alle Gates grün
 #   1  degradiert    — INIT mit Vermerk (z. B. leere Token-Palette) bzw.
@@ -57,6 +61,7 @@ PIN=()
 EXCLUDE=()
 REGISTRY_ONLY=false
 NO_REGISTRY=false
+BRANDING_SLUG=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --verify) MODE="verify"; RUN_DIR="${2:-}"; shift 2 ;;
@@ -67,6 +72,7 @@ while [[ $# -gt 0 ]]; do
     --exclude)       EXCLUDE+=("${2:-}"); shift 2 ;;
     --registry-only) REGISTRY_ONLY=true; shift ;;
     --no-registry)   NO_REGISTRY=true; shift ;;
+    --branding)      BRANDING_SLUG="${2:-}"; shift 2 ;;
     -h|--help) sed -n '2,40p' "$0"; exit 0 ;;
     -*)       die "Unbekannte Option: $1" ;;
     *)        [[ -z "$RUN_DIR" ]] && RUN_DIR="$1" || die "Zu viele Argumente: $1"; shift ;;
@@ -78,6 +84,23 @@ done
 RD="$RUN_DIR/redesign"
 RECIPE_VERSION="$(head -1 "$ROOT/recipes/VERSION" 2>/dev/null || true)"
 [[ -n "$RECIPE_VERSION" ]] || die "recipes/VERSION fehlt — Rezepte sind Teil des Repos."
+
+resolve_branding_source() {
+  if [[ -n "$BRANDING_SLUG" ]]; then
+    [[ "$BRANDING_SLUG" =~ ^[a-z0-9][a-z0-9-]*$ ]] || die "Ungültiger Branding-Slug: $BRANDING_SLUG"
+    local profile_dir="$ROOT/branding/$BRANDING_SLUG"
+    [[ -d "$profile_dir" ]] || die "Branding-Profil nicht gefunden: branding/$BRANDING_SLUG"
+    [[ -e "$profile_dir/current" ]] || die "Branding-Profil hat kein current-Ziel: branding/$BRANDING_SLUG/current"
+    local src="$profile_dir/current"
+    [[ -s "$src/tokens.json" ]] || die "Branding-Profil unvollständig: branding/$BRANDING_SLUG/current/tokens.json fehlt."
+    [[ -s "$src/tailwind-theme.css" ]] || die "Branding-Profil unvollständig: branding/$BRANDING_SLUG/current/tailwind-theme.css fehlt."
+    printf '%s\n' "$src"
+    return 0
+  fi
+  [[ -s "$RUN_DIR/branding/tokens.json" ]] || die "branding/tokens.json fehlt — Branding-Extraktion (PROJ-3) ist Redesign-Voraussetzung."
+  [[ -s "$RUN_DIR/branding/tailwind-theme.css" ]] || die "branding/tailwind-theme.css fehlt — Branding-Extraktion (PROJ-3) unvollständig."
+  printf '%s\n' "$RUN_DIR/branding"
+}
 
 # status.json (PROJ-5) fortschreiben, falls vorhanden — Fortschrittsquelle Jupiter.
 update_status() { # $1=phase-status $2=fehlertext
@@ -133,8 +156,7 @@ if [[ "$MODE" == "init" ]]; then
   cap_status="$(jq -r '.status // "unbekannt"' "$RUN_DIR/meta.json")"
   [[ "$cap_status" == "ok" ]] || die "Capture-Status ist '$cap_status' (erwartet: ok) — Redesign braucht einen vollständigen Stufe-1-Lauf."
   [[ -s "$RUN_DIR/scores.json" ]] || die "scores.json fehlt — erst Stufe 1 abschließen (ui-check.sh --finalize), dann Redesign."
-  [[ -s "$RUN_DIR/branding/tokens.json" ]] || die "branding/tokens.json fehlt — Branding-Extraktion (PROJ-3) ist Redesign-Voraussetzung."
-  [[ -s "$RUN_DIR/branding/tailwind-theme.css" ]] || die "branding/tailwind-theme.css fehlt — Branding-Extraktion (PROJ-3) unvollständig."
+  BRANDING_SRC="$(resolve_branding_source)" || exit $?
 
   if [[ -e "$RD" && "$FORCE" != true ]]; then
     die "Es existiert bereits ein Redesign in $RD — erneuter INIT nur mit --force (überschreibt shared/ + redesign-context.json, generierte Inhalte bleiben)."
@@ -143,17 +165,29 @@ if [[ "$MODE" == "init" ]]; then
   DEGRADED=false
   NOTES=()
 
-  palette_n="$(jq -r '[.color.palette[]?] | length' "$RUN_DIR/branding/tokens.json" 2>/dev/null || echo 0)"
+  palette_n="$(jq -r '
+    (.color // {}) |
+    [.. | objects | (.["$value"]? // .hex?) |
+      select(type == "string" and test("^#[0-9A-Fa-f]{3,8}$"))] |
+    unique | length
+  ' "$BRANDING_SRC/tokens.json" 2>/dev/null || echo 0)"
   if [[ "${palette_n:-0}" -eq 0 ]]; then
     DEGRADED=true
     NOTES+=("Token-Palette ist leer — jede Farbentscheidung muss im Brief begründet und in shared/tokens-extra.json deklariert werden.")
   fi
-  logo_src="$(jq -r '.logo.source // "null"' "$RUN_DIR/branding/branding-meta.json" 2>/dev/null || echo null)"
+  logo_src="$(jq -r '.logo.source // "profile"' "$BRANDING_SRC/branding-meta.json" 2>/dev/null || echo profile)"
   [[ "$logo_src" == "null" ]] && NOTES+=("Kein Logo extrahiert — Wortmarke aus Tokens setzen, kein Logo erfinden.")
 
   mkdir -p "$RD/shared" "$RD/safe" "$RD/bold" || die "Scaffold nicht anlegbar: $RD"
-  cp "$RUN_DIR/branding/tokens.json"        "$RD/shared/tokens.json"
-  cp "$RUN_DIR/branding/tailwind-theme.css" "$RD/shared/tailwind-theme.css"
+  cp "$BRANDING_SRC/tokens.json"        "$RD/shared/tokens.json"
+  cp "$BRANDING_SRC/tailwind-theme.css" "$RD/shared/tailwind-theme.css"
+  jq -n \
+    --arg mode "$( [[ -n "$BRANDING_SLUG" ]] && echo profile || echo run )" \
+    --arg slug "$BRANDING_SLUG" \
+    --arg source "$(realpath --relative-to="$ROOT" "$BRANDING_SRC" 2>/dev/null || printf '%s' "$BRANDING_SRC")" \
+    --arg version "$(basename "$(realpath "$BRANDING_SRC" 2>/dev/null || printf '%s' "$BRANDING_SRC")")" \
+    '{mode:$mode, slug:(if $slug=="" then null else $slug end), source:$source, version:$version}' \
+    > "$RUN_DIR/.branding-source.json" 2>/dev/null || true
 
   # Kontext für Brief-/Content-/Visual-Pässe bündeln.
   notes_json="$(printf '%s\n' "${NOTES[@]:-}" | jq -R . | jq -s 'map(select(. != ""))')"
@@ -194,7 +228,11 @@ if [[ "$MODE" == "init" ]]; then
   update_status "awaiting_generation" ""
 
   echo "✓ Redesign-Scaffold angelegt → $RD"
-  echo "  · shared/tokens.json + tailwind-theme.css (eingefrorener Stand dieses Laufs)"
+  if [[ -n "$BRANDING_SLUG" ]]; then
+    echo "  · shared/tokens.json + tailwind-theme.css aus Branding-Profil '$BRANDING_SLUG'"
+  else
+    echo "  · shared/tokens.json + tailwind-theme.css (eingefrorener Stand dieses Laufs)"
+  fi
   echo "  · redesign-context.json (Scores, Befunde, Nutzer-Prompt, Rezept-Version $RECIPE_VERSION)"
   for n in "${NOTES[@]:-}"; do [[ -n "$n" ]] && echo "  ⚠ $n"; done
   echo

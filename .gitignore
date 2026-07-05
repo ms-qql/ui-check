@@ -3,6 +3,7 @@ runs/
 
 # Template/Registry Build-Artefakte
 node_modules/
+**/node_modules
 templates/*/poc/dist/
 templates/*/poc/node_modules/
 registry/templates/*/preview/dist/

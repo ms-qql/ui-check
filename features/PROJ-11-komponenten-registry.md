@@ -1,8 +1,8 @@
 # PROJ-11: Komponenten-Registry & Best-of-Recycling
 
-## Status: In Progress
+## Status: In Review
 **Created:** 2026-07-02
-**Last Updated:** 2026-07-04 (Profil „meridian" aufgenommen)
+**Last Updated:** 2026-07-04 (alle 5 AC erfüllt & verifiziert; shadcn-MCP-Lesbarkeit bestätigt)
 
 ## Dependencies
 - Requires: PROJ-6 (liefert die Sektionen, die kuratiert werden)
@@ -12,9 +12,9 @@
 - Als Claude (Generierung) möchte ich die eigene Registry wie jede shadcn-Registry durchsuchen und installieren können.
 
 ## Acceptance Criteria
-- [ ] Lokale Registry im shadcn-Registry-Format (`registry.json` + Komponenten-Dateien), lesbar über den offiziellen shadcn-MCP
-- [ ] Metadaten je Baustein: Industrie, Kundensegment, Sektionstyp (Hero/Pricing/Trust/CTA/…), Stil (Safe/Bold), Herkunfts-Lauf, Datum
-- [ ] Recycling-Schritt am Ende jedes Redesign-Laufs: Vorschlag portfoliowürdiger Sektionen; Übernahme generalisiert Kundentexte zu Platzhaltern (keine Kundendaten in der Registry)
+- [x] Lokale Registry im shadcn-Registry-Format (`registry.json` + Komponenten-Dateien), lesbar über den offiziellen shadcn-MCP (verifiziert: `shadcn@4.13.0 build` verarbeitet alle 30 Items fehlerfrei; Schema-konform)
+- [x] Metadaten je Baustein: Industrie, Kundensegment, Sektionstyp (Hero/Pricing/Trust/CTA/…), Stil (Safe/Bold), Herkunfts-Lauf, Datum (`meta.{section,style,industry,source,date,image_slots}`, in gebauten Item-JSONs erhalten)
+- [x] Recycling-Schritt am Ende jedes Redesign-Laufs: Vorschlag portfoliowürdiger Sektionen; Übernahme generalisiert Kundentexte zu Platzhaltern (keine Kundendaten in der Registry) (`scripts/registry-recycle.mjs` + Skill `ui-recycle`)
 - [x] PROJ-6 bevorzugt bei passenden Tags Registry-Bausteine vor Neu-Generierung (Selektor `scripts/registry-select.mjs` + `redesign.sh --select`)
 - [x] Registry-Browser-Ansicht (einfaches Markdown/HTML-Inventar) zum Durchblättern (`scripts/registry-inventory.mjs` → `registry/INVENTORY.md` + `registry/inventory.html`)
 
@@ -104,11 +104,93 @@ Zwei AC-Bausteine ergänzt.
 
 **Zusatz:** `registry-select.mjs` normalisiert jetzt auch die **Block-Section** über die Synonym-Tabelle → Blocks mit granularen Tags (z. B. `meridian-testimonials`=`testimonials`, `meridian-flow`=`steps`) matchen `social-proof`/`process`-Sektionen; Stil bricht den Gleichstand zwischen Templates.
 
-Offene AC: nur noch „Recycling-Schritt am Ende jedes Redesign-Laufs".
+---
+## Implementation Notes (2026-07-04, Nachtrag: Best-of-Recycling)
+
+Letzte offene AC umgesetzt — **alle 5 Acceptance Criteria erfüllt**.
+
+**Angelegt:**
+- `scripts/registry-recycle.mjs` — deterministisch, zwei Modi:
+  - **propose** (`--run`): gated auf Lauf-Qualität (`total`≥62, `visuell`≥65; `--force`), rankt je Sektion beider Varianten einen **Portfolio-Score** aus Lauf-Qualität + **Neuartigkeit** (Dedupe gegen die Registry). Nur neuartige Sektionen werden vorgeschlagen; bereits abgedeckte (Sim ≥ 0.55) gesondert gelistet. Je Vorschlag: Sektionstyp, nächster Bestands-Block, Vorschlag-Name/Meta und der **Generalisierungs-Bedarf**. Output `redesign/recycle-proposals.json`.
+  - **guard** (`--guard <block>`): blockt die Übernahme (Exit 2), solange **Kundendaten** (verbatim `content.json`-Copy, PII, Domain), **Roh-Hex**, **Tailwind-Default-Palette** oder **Run-Tokens** (`text-primary`, `bg-palette-N`, `text-text` → müssen auf Registry-Semantik) oder ein **Duplikat** (Dedupe ≥ 0.80) vorliegen. Erfüllt den Edge Case „Übernahme blockiert, bis Platzhalter/Token sauber".
+- Skill **`ui-recycle`** (`.claude/skills/ui-recycle/`) — führt propose → auswählen → kopieren → generalisieren (Token-Umstellung, Platzhalter, Slot) → **Guard-Gate** → Dedupe → Build-Verifikation → registry.json + VERSION + Inventar → Tracking. Human-in-the-Loop.
+- `ui-redesign`-Skill Schritt **6**: bietet Recycling nach Verify an.
+
+**Getestet** (Lauf `2026-07-04-auxevo.tech-001`, total 68): propose → 14 neuartige Sektionen mit korrektem Generalisierungs-Bedarf; guard auf rohe `safe/Hero.jsx` → BLOCKIERT (Roh-Hex `#a3a3a3` + Run-Tokens `bg-palette-2`, `text-primary`); guard auf sauberen Registry-Block → frei. **Erkenntnis:** Redesign-Sektionen sind props-getrieben → Kundencopy liegt in `content.json`, nicht im Code; der eigentliche Übernahme-Aufwand ist die **Token-Umstellung** (Run-Vokabular → Registry-Semantik), die der Guard erzwingt.
+
+---
+## Implementation Notes (2026-07-04, Nachtrag: shadcn-MCP-Lesbarkeit verifiziert)
+
+AC1 praktisch bestätigt — **alle 5 Acceptance Criteria erfüllt & verifiziert**.
+
+- **Schema:** offizielles Registry- und Item-Schema (`ui.shadcn.com/schema/*`) erlauben Zusatzfelder (`additionalProperties` ≠ false) → `$meta`/`meta` unkritisch; alle `files[].type` (`registry:block|lib|file|style`) liegen im Enum; Pflichtfelder (`name`,`type`) vorhanden.
+- **CLI/MCP-Build:** `npx shadcn@4.13.0 build registry.json` verarbeitet **alle 30 Items fehlerfrei** (`✔ Building registry.`) und erzeugt die MCP/CLI-konsumierbaren Item-JSONs (genau das, was der shadcn-MCP an `/r/<name>.json` ausliefert). Stichprobe `verdict-hero.json`: eingebetteter Code (`content`), `dependencies`/`registryDependencies`, vollständige `meta` (section/style/industry/source/date/image_slots) erhalten; Multi-File-Item `verdict-template` = `App.jsx` (registry:block) + `content.json` (registry:file).
+- **Offen (optional, Betrieb):** kein shadcn-MCP-Server in dieser Session verbunden; für echte MCP-Nutzung die gebauten `/r`-JSONs hosten bzw. die Registry als `registries`-Eintrag in `components.json` registrieren.
 
 ---
 ## Tech Design (Solution Architect)
-_To be added by /abc-architecture_
+**Erstellt:** 2026-07-05 · **Stack:** Node-CLIs (ESM/CJS, nur Builtins + esbuild/@tailwindcss/cli/Playwright zur Verifikation) · shadcn-Registry-Format als Datenmodell · Claude-Skills als Orchestrierung · **Branch:** dev
+> Nachträgliches Design zu einer bereits gebauten & verifizierten Feature-Kette (alle 5 AC ✓). Es hält die realisierte Architektur fest, statt neue Arbeit zu planen. Bewusst **kein** FastAPI/Flutter-Default-Stack: PROJ-11 ist Teil der dateibasierten UI-Check-Pipeline (Läufe unter `runs/`, keine DB, kein Server).
+
+### A) Komponenten-Struktur (was existiert)
+```
+registry/                          ← die Registry selbst (shadcn-Format = Quelle der Wahrheit)
+├── registry.json                  ← 30 Items: Blocks + lib + styles + Template-Kompositionen
+├── VERSION (0.2.0)
+├── blocks/*.jsx                   ← token-agnostische Sektions-Bausteine (verdict-*, meridian-*, hero45)
+├── lib/*.jsx|.js                  ← Primitives (Slot, cn, Buttons …) je Profil
+├── styles/{tokens.css,base.css}   ← semantische Token-Schicht (--font-display optional)
+├── templates/<slug>/              ← template.json + content.json (Platzhalter) + App.jsx + preview/
+├── INVENTORY.md · inventory.html  ← Browser-Ansicht (deterministisch generiert)
+└── (branding/<slug>/ daneben)     ← Branding-Profil je Template (Guide + Tokens + Fonts + Logo)
+
+scripts/  (die vier Registry-CLIs, deterministisch, kein LLM)
+├── registry-select.mjs      ← PROJ-6-Andockung: wählt je Sektion Registry-Block vs. generieren + Token-Alias
+├── registry-recycle.mjs     ← propose (portfoliowürdige Sektionen) + guard (blockt Kundendaten/Roh-Tokens)
+├── registry-dedupe.mjs      ← Ähnlichkeits-/Duplikat-Prüfung (Jaccard, Audit + Kandidat)
+└── registry-inventory.mjs   ← INVENTORY.md + inventory.html aus registry.json
+
+.claude/skills/  (Human-in-the-Loop-Orchestrierung um die CLIs)
+├── ui-template-ingest   ← ganze Fremd-Templates → Clean-Room → Profil (verdict, meridian)
+├── ui-block-ingest      ← einzelne shadcnblocks-Free-Blocks via /r/<name> (hero45)
+└── ui-recycle           ← Best-of-Sektionen aus abgeschlossenen Läufen in die Registry
+```
+
+### B) Datenmodell (Klartext)
+Kein Postgres/MinIO — der „Speicher" ist das versionierte `registry/`-Verzeichnis im shadcn-Registry-Format.
+```
+Jeder Baustein (Item) trägt:
+- name, type (registry:block|lib|file|style)
+- files[] mit eingebettetem Code (beim shadcn-build als `content`)
+- dependencies / registryDependencies
+- meta: { section, style (Safe/Bold), industry, source (Herkunfts-Lauf/Template), date, image_slots[] }
+Bilder werden NIE gespeichert — nur als benannte `Slot`/`data-image-slot`-Platzhalter (Contract mit PROJ-7/20).
+Kundendaten werden NIE gespeichert — Copy liegt generalisiert in templates/<slug>/content.json.
+```
+Multi-Tenancy/RLS/Auth entfallen (kein Server, keine Kundendaten in der Registry — genau das erzwingt der Recycle-Guard).
+
+### C) Schnittstellen (statt HTTP-Endpunkte)
+Die Registry hat zwei „Konsumenten-Verträge":
+```
+- shadcn-MCP/CLI:   `shadcn build registry.json` → /r/<name>.json  (verifiziert, 30 Items fehlerfrei)
+                    → jede shadcn-Registry-fähige Toolchain kann browsen/installieren
+- ui-redesign (PROJ-6):  `redesign.sh --select` → registry-selection.{safe,bold}.json
+                    + Blocks nach redesign/registry/ kopiert + registry-tokens.css (Token-Alias)
+- CLI-Kontrakte:    Exit-Codes als Gates — Dedupe (2=Dup/1=ähnlich/0=ok), Recycle-Guard (2=blockiert),
+                    Select --registry-only (2=Lücke); Verify-Gate G-REG in redesign.sh
+```
+
+### D) Tech-Entscheidungen (Warum)
+- **shadcn-Registry-Format als Datenmodell**, nicht eine eigene DB: die zweite User-Story verlangt, dass Claude die Registry „wie jede shadcn-Registry" durchsuchen/installieren kann — das Format IST damit die Schnittstelle. Zusatzfelder (`meta`) sind schema-zulässig (`additionalProperties`), also kein Fork nötig.
+- **Token-agnostische Blocks + Token-Alias-Schicht**: Bausteine referenzieren nur semantische Tokens (paper/ink/surface/line, --font-display), nie Roh-Hex oder Run-Vokabular. Erst beim Einsetzen mappt `registry-tokens.css` die Registry-Semantik aufs Kunden-Branding → ein Block funktioniert für jede Branche, ohne Kundenfarben mitzuschleppen.
+- **Deterministische Node-CLIs statt LLM** für Select/Dedupe/Recycle/Inventory: reproduzierbar, headless testbar, keine Token-Kosten; das LLM-Urteil (Freigabe, Auswahl der Best-of-Sektionen) bleibt an den Skill-Gates (Human-in-the-Loop).
+- **Guard-Gate erzwingt „keine Kundendaten in der Registry"** (Edge Case): blockt verbatim-Copy, PII, Domains, Roh-Hex, Tailwind-Default-Palette und Run-Tokens per Exit 2 — Datenschutz als Code, nicht als Konvention.
+- **Zwei Ingest-Pfade**: `ui-block-ingest` nutzt bei Free-Blocks den echten lizenzierten `/r/<name>`-Quellcode (kein Rebuild); `ui-template-ingest` baut ganze kommerzielle Templates clean-room nach (nur Struktur/Look) — Lizenz-sauber je nach Quelle.
+
+### E) Abhängigkeiten
+- Node ≥ 18 (ESM/CJS, nur Builtins für die vier CLIs).
+- Verifikation (nicht Laufzeit): `esbuild`, `@tailwindcss/cli` (v4), `playwright` (Render-Checks), `shadcn@4.13.x` (build/MCP-Konformität).
+- Keine neuen Python/Flutter-Dependencies (Feature liegt außerhalb des Default-Stacks).
 
 ## QA Test Results
 _To be added by /abc-qa_

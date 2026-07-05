@@ -19,6 +19,16 @@
 #      Anti-Slop mechanisch (CTA-Länge, ein Label pro Intent, Zigzag-Cap).
 #      Ergebnis: <run-dir>/redesign/verify.json (grün/gelb/rot je Gate).
 #
+#   3) SELECT   redesign.sh --select <run-dir> [Registry-Overrides]
+#      Registry-Andockung (PROJ-11) nach dem Content-Pass: wählt je Sektion
+#      einen Registry-Block (Auto nach Typ+Branche+Stil, Fallback = generieren)
+#      und schreibt redesign/registry-selection.{safe,bold}.json + redesign/registry/
+#      (kopierte Blocks/lib + Token-Alias registry-tokens.css).
+#
+#   Registry-Overrides (auch bei INIT verwendbar, werden in registry-config.json
+#   persistiert): --template <slug> · --pin <section>=<block> · --exclude <block>
+#   · --registry-only (kein Fallback) · --no-registry (Registry aus).
+#
 # Exit-Codes (headless-tauglich, Jupiter/PROJ-14):
 #   0  ok            — INIT vollständig bzw. alle Gates grün
 #   1  degradiert    — INIT mit Vermerk (z. B. leere Token-Palette) bzw.
@@ -41,11 +51,23 @@ command -v jq >/dev/null 2>&1 || die "jq nicht gefunden — apt install jq / bre
 MODE="init"
 RUN_DIR=""
 FORCE=false
+# Registry-Andockung (PROJ-11) — optionale Overrides
+TEMPLATE=""
+PIN=()
+EXCLUDE=()
+REGISTRY_ONLY=false
+NO_REGISTRY=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --verify) MODE="verify"; RUN_DIR="${2:-}"; shift 2 ;;
+    --select) MODE="select"; RUN_DIR="${2:-}"; shift 2 ;;
     --force)  FORCE=true; shift ;;
-    -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
+    --template)      TEMPLATE="${2:-}"; shift 2 ;;
+    --pin)           PIN+=("${2:-}"); shift 2 ;;
+    --exclude)       EXCLUDE+=("${2:-}"); shift 2 ;;
+    --registry-only) REGISTRY_ONLY=true; shift ;;
+    --no-registry)   NO_REGISTRY=true; shift ;;
+    -h|--help) sed -n '2,40p' "$0"; exit 0 ;;
     -*)       die "Unbekannte Option: $1" ;;
     *)        [[ -z "$RUN_DIR" ]] && RUN_DIR="$1" || die "Zu viele Argumente: $1"; shift ;;
   esac
@@ -65,6 +87,29 @@ update_status() { # $1=phase-status $2=fehlertext
   jq --arg s "$1" --arg e "${2:-}" --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
      '.phases.redesign = {status:$s, error:($e|if .=="" then null else . end)} | .updated_at=$now' \
      "$sf" > "$tmp" 2>/dev/null && mv "$tmp" "$sf" || rm -f "$tmp"
+}
+
+# ── Registry-Andockung (PROJ-11) ────────────────────────────────────────────
+# Overrides persistieren, damit --select später denselben Stand nutzt.
+write_registry_config() {
+  local pins_json exc_json
+  pins_json="$(for kv in "${PIN[@]:-}"; do [[ -n "$kv" ]] && printf '%s\n' "$kv"; done \
+                | jq -R 'select(.!="") | (split("=")) | select(length==2) | {(.[0]):.[1]}' | jq -s 'add // {}')"
+  exc_json="$(printf '%s\n' "${EXCLUDE[@]:-}" | jq -R 'select(.!="")' | jq -s '.')"
+  jq -n --arg t "$TEMPLATE" --argjson pin "$pins_json" --argjson exc "$exc_json" \
+        --argjson ro "$REGISTRY_ONLY" --argjson nr "$NO_REGISTRY" \
+     '{template:(if $t=="" then null else $t end), pin:$pin, exclude:$exc, registryOnly:$ro, noRegistry:$nr}' \
+     > "$RD/registry-config.json"
+}
+# Selektor für safe+bold ausführen; höchsten Exit-Code (0 ok / 1 degradiert / 2 hart) zurückgeben.
+run_registry_select() {
+  command -v node >/dev/null 2>&1 || { echo "  ⚠ node fehlt — Registry-Auswahl übersprungen."; return 0; }
+  [[ -s "$ROOT/registry/registry.json" ]] || { echo "  ⚠ Keine Registry — Auswahl übersprungen."; return 0; }
+  local rc=0 st
+  for st in safe bold; do
+    node "$ROOT/scripts/registry-select.mjs" --run "$RUN_DIR" --style "$st" --config "$RD/registry-config.json" || { local c=$?; (( c > rc )) && rc=$c; }
+  done
+  return $rc
 }
 
 # Hex-Farben auf 6-stellige Kleinschreibung normalisieren (#abc → #aabbcc,
@@ -139,6 +184,13 @@ if [[ "$MODE" == "init" ]]; then
       created_at: $created }' > "$RD/redesign-context.json" \
     || die "redesign-context.json konnte nicht geschrieben werden."
 
+  # Registry-Andockung: Config sichern; Auswahl sobald der Sektionsplan (content.json) existiert.
+  write_registry_config
+  if [[ -s "$RD/shared/content.json" ]]; then
+    echo "  · Registry-Auswahl (safe+bold) …"
+    run_registry_select || true
+  fi
+
   update_status "awaiting_generation" ""
 
   echo "✓ Redesign-Scaffold angelegt → $RD"
@@ -152,6 +204,18 @@ if [[ "$MODE" == "init" ]]; then
   echo "    3. Visual-Pass ×2      → $RD/safe/ + $RD/bold/ + $RD/images.md"
   echo "    4. Gates               → scripts/redesign.sh --verify $RUN_DIR"
   [[ "$DEGRADED" == true ]] && exit 1
+  exit 0
+fi
+
+# ════════════════════════════════════════════════════════════════════════════
+# SELECT-Modus (Registry-Andockung nach dem Content-Pass)
+# ════════════════════════════════════════════════════════════════════════════
+if [[ "$MODE" == "select" ]]; then
+  [[ -d "$RD" ]] || die "Kein redesign/ in $RUN_DIR — erst INIT ausführen."
+  write_registry_config
+  run_registry_select; rc=$?
+  [[ $rc -ge 2 ]] && exit 2
+  [[ $rc -eq 1 ]] && exit 1
   exit 0
 fi
 
@@ -191,6 +255,27 @@ if [[ ${#missing[@]} -eq 0 ]]; then
   gate G1 ok "Struktur vollständig (brief, images, compare, shared, safe/, bold/)"
 else
   gate G1 fail "Struktur unvollständig" "fehlt: ${missing[*]}"
+fi
+
+# ── G-REG: Registry-Andockung (PROJ-11) — nur prüfen, falls genutzt ──────────
+shopt -s nullglob; reg_sels=("$RD"/registry-selection.*.json); shopt -u nullglob
+if [[ ${#reg_sels[@]} -gt 0 ]]; then
+  reg_fail=0; reg_detail=""
+  for f in "${reg_sels[@]}"; do
+    stl="$(jq -r '.style' "$f")"; st="$(jq -r '.status' "$f")"
+    gen="$(jq -r '.stats.generate' "$f")"; ro="$(jq -r '.overrides.registryOnly' "$f")"
+    [[ "$st" == "error" ]] && { reg_fail=1; reg_detail+="$stl:error "; }
+    [[ "$ro" == "true" && "${gen:-0}" -gt 0 ]] && { reg_fail=1; reg_detail+="$stl:registry-only-Lücke($gen) "; }
+    while IFS= read -r b; do [[ -z "$b" ]] && continue
+      [[ -s "$RD/registry/blocks/$b.jsx" ]] || { reg_fail=1; reg_detail+="$stl:$b-fehlt "; }
+    done < <(jq -r '.blocks_copied[]?' "$f")
+  done
+  [[ -s "$RD/registry/registry-tokens.css" ]] || { reg_fail=1; reg_detail+="token-alias-fehlt "; }
+  if [[ $reg_fail -eq 0 ]]; then
+    gate GREG ok "Registry-Andockung konsistent (Auswahl + kopierte Blocks + Token-Alias)"
+  else
+    gate GREG fail "Registry-Andockung fehlerhaft" "$reg_detail"
+  fi
 fi
 
 # ── G2: brief.md Pflicht-Abschnitte ─────────────────────────────────────────

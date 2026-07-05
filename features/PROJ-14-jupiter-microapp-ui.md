@@ -226,3 +226,43 @@ Status bleibt **In Review**. Vor Approval zuerst `PROJ-14-BUG-1`, `PROJ-14-BUG-2
 
 ## Deployment
 _To be added by /abc-deploy_
+
+## QA Test Results (Nachtrag: Listen-Verwaltung — Ausblenden & Löschen)
+**QA-Datum:** 2026-07-05
+**Tester:** Claude `/abc-qa`
+**Getesteter Stand:** Jupiter-Worktree (Branch `dev`), uncommittete Änderungen an
+`backend/app/routes/ui_check.py`, `backend/app/engine/ui_check.py`,
+`backend/tests/test_proj14_ui_check.py`,
+`nextjs_app/components/microapps/ui_check/ui-check-app.tsx`,
+`nextjs_app/lib/api.ts`.
+
+### Ergebnis
+- **Neue Funktionalität:** 2/2 Akzeptanzkriterien bestanden (Ausblenden per Auge, Löschen per Papierkorb inkl. Server-Löschung)
+- **Bugs neu:** 0 High/Critical, 1 Low
+- **Regression:** keine — `pytest` 1051 passed/1 pre-existing Fail (`test_proj50_codex_abc` skill-drift, unabhängig); PROJ-14/18/40/53 gemeinsam **69 passed**
+- **Produktionsentscheidung für diesen Nachtrag:** **READY** — bestehende `PROJ-14-BUG-1..4` bleiben unberührt offen.
+
+### Akzeptanzkriterien (Nachtrag)
+| Kriterium | Status | Nachweis |
+|---|---:|---|
+| Läufe einzeln ausblenden (Auge), persisted über Reloads | ✅ Pass | `RunHistory` togglet `hidden`-Set, schreibt `localStorage["ui-check:hidden-runs"]`; `useEffect` re-persistiert. Umschalter "Ausgeblendete (N)" zeigt sie wieder. |
+| Läufe komplett vom Server löschen (Papierkorb) | ✅ Pass | `DELETE /ui-check/runs/{run_id}` → 204; `shutil.rmtree` entfernt den Run-Ordner; 2 neue Tests `test_delete_run_removes_folder_and_404s_after`, `test_delete_run_refuses_running_process` grün. Frontend: Bestätigungs-Dialog, danach Refresh + aktive Auswahl cleared. |
+
+### Bugs (Nachtrag)
+#### PROJ-14-BUG-5 — Low — Ausgeblendete Läufe verbleiben in `localStorage` nach Server-Löschung
+**Reproduktion:** Lauf A ausblenden (Auge). Lauf A auf anderem Weg vom Server löschen (z. B. zweites Gerät oder direkter Ordner-Weg). Auf dem ersten Gerät_reload. **Ist:** `run_id` bleibt ewig im `localStorage["ui-check:hidden-runs"]`-Set, da das Set nicht gegen die frische Run-Liste abgeglichen wird. **Soll:** Beim Laden oder nach `refresh()` sollten IDs, die nicht mehr in `runs` existieren, aus dem Hidden-Set entfernt werden. **Auswirkung:** rein kosmetisch (keinlaufender Toggle-Schaden, nur langsam wachsender Storage). **Referenz:** `nextjs_app/components/microapps/ui_check/ui-check-app.tsx` (`loadHiddenRuns`/`RunHistory`).
+
+### Security Audit (Nachtrag)
+- ✅ Path-Traversal beim Löschen: `_safe_run_id` (`/`, `..` verboten) + zusätzlicher Guard `path.resolve() == runs_dir.resolve() → UiCheckNotFound`; Test `test_delete_run_removes_folder_and_404s_after` deckt `DELETE /../..`-Fall ab.
+- ✅ Kein Löschen laufender Läufe: Engine wirft `UiCheckConflict` (409), Frontend deaktiviert den Papierkorb-Button für Status `queued`/`running`.
+- ⚠ Kein Mandanten-Schutz auf `DELETE` (wie auch nicht auf den anderen UI-Check-Routes) — vorbestehend, nicht durch diesen Nachtrag eingeführt.
+- ✅ Kein CSRF-Risiko: API nutzt Bearer-Token, keine Cookies.
+
+### Automatisierte Tests (Nachtrag)
+- ✅ Backend: `python -m pytest backend/tests/test_proj14_ui_check.py` → **8 passed** (6 bestehend + 2 neu).
+- ✅ Regression: `test_proj14 + test_proj18 + test_proj40 + test_proj53` → **69 passed**.
+- ✅ Frontend Lint: `npm run lint` clean.
+- ✅ Frontend TypeScript: `npx tsc --noEmit` — nur vorbestehender, unabhängiger Fehler in `lib/md-tree.test.ts` (nicht PROJ-14).
+
+### Empfehlung
+Nachtrag ist freigegeben. `PROJ-14-BUG-1..3` (High) bleiben der Blocker für das Gesamt-Approval und sind von diesem Nachtrag unberührt. BUG-5 (Low) kann opportunistisch mitgenommen werden.
